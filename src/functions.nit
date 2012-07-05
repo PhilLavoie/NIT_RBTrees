@@ -38,6 +38,17 @@ class DefaultEquals[ T, U ]
 	end
 end
 
+class ComparatorEquals[ T, U ]
+	super Equals[ T, U ]
+	var comparator: Comparator[ T, U ]
+	init ( c: Comparator[ T, U ] ) do
+		self.comparator = c
+	end
+	redef fun call( lhs, rhs ) do
+		return self.comparator.call( lhs, rhs ) == 0
+	end
+end
+
 class EquivalenceComparator[ T, U ]
 	super Comparator[ T, U ]
 	redef fun call( lhs, rhs ) do

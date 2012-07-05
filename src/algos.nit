@@ -29,23 +29,24 @@ class Algos
 		return res
 	end
 	
-	fun count( iter: Iterator[ nullable Object ], e: nullable Object ): Int do
+	fun count( iter: Iterator[ nullable Object ], e: nullable Object, equals: Equals[ nullable Object, nullable Object ] ): Int do
 		var res = 0
 		while iter.is_ok do
-			find( iter, e )
-			if iter.is_ok then res += 1 else break
+			if equals.call( iter.item, e ) then res += 1
 			iter.next
 		end
 		return res
 	end
 	
-	fun find( iter: Iterator[ nullable Object ], e: nullable Object ): Iterator[ nullable Object ] do
-		while iter.is_ok do
-			if iter.item is e or iter.item == e then break
-			iter.next
-		end
-		return iter
-	end
+	#TODO replace this by find first and find last, or something like first_if and last_if
+	#(meaning such that)
+#	fun find( iter: Iterator[ nullable Object ], e: nullable Object ): Iterator[ nullable Object ] do
+#		while iter.is_ok do
+#			if iter.item is e or iter.item == e then break
+#			iter.next
+#		end
+#		return iter
+#	end
 	
 	fun copy( iter: Iterator[ nullable Object ], inserter: Inserter[ nullable Object ] ) do
 		while iter.is_ok do

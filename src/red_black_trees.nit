@@ -2,8 +2,6 @@ import results
 import inserters
 import iterators
 import functions
-import intervals
-import data_structures
 
 #Class of red black tree nodes. Basically, in addition to usual
 #tree pointers the node holds a color, which is either red or black.
@@ -121,31 +119,42 @@ private class RBTreeNode[ T ]
 	end
 end
 
-class RBTreePosition[ T ] super Position[ T ]
-	redef type Compared: RBTreePosition[ T ]
-	
+#Class representing a position on the tree. Mainly a class that is a level
+#higher than the iterators. Positions are meant to be created by this module's
+#classes only.
+class RBTreePosition[ T ] 
+#	super Position[ T ]
+	type Compared: RBTreePosition[ T ]
+	#The tree node.
 	private var node: nullable RBTreeNode[ T ]
+	#Constructs the position on the given node.
 	private init inplace( n: nullable RBTreeNode[ T ] ) do
 		self.node = n
 	end
+	#Constructs an invalid position, same as inplace( null )
 	private init invalid() do
 		self.node = null
 	end	
-	redef fun is_ok(): Bool do
-		return self.node != null
-	end
-	redef fun item(): T do
-		return self.node.element
-	end
-	redef fun equals( rhs: Compared ): Bool do
+#	fun is_ok(): Bool do
+#		return self.node != null
+#	end
+#	fun item(): T do
+#		return self.node.element
+#	end
+	#Two positions are equals if both are located on the same place
+	#on the tree, not if both are the same object (but returns true
+	#when they are).
+	fun equals( rhs: Compared ): Bool do
 		return self.node == rhs.node
 	end
+	
+	#TODO add clone method.
 end
 
 #Bidirectional iterator.
 class RBTreeBiIterator[ T ]
 	super RBTreePosition[ T ]
-	super BidirectionalIter[ T ]
+	super BidirectionalIterator[ T ]
 	#Creates an iterator that start on the specified node.
 	private init inplace( node: nullable RBTreeNode[ T ] ) do
 		self.node = node
@@ -162,7 +171,7 @@ class RBTreeBiIterator[ T ]
 			node = node.parent
 		end
 	end
-	#Same as calling next on a reverse iterator.
+	#Moves towards the previous element in order.
 	redef fun previous() do
 		if self.node.is_left and not self.node.has_left then
 			while self.node.is_left do
@@ -175,16 +184,26 @@ class RBTreeBiIterator[ T ]
 			node = node.parent
 		end
 	end
+	redef fun is_ok() do
+		return self.node != null
+	end
+	redef fun item() do
+		return self.node.element
+	end
+	
 	#Returns a newly created reverse iterator starting on the same position.
 	redef fun reverse(): RBTreeRIterator[ T ] do
 		return new RBTreeRIterator[ T ].inplace( self.node )
+	end
+	redef fun clone(): RBTreeBiIterator[ T ] do
+		return new RBTreeBiIterator[ T ].inplace( self.node )
 	end
 end
 
 #Reverse view of the iterator.
 class RBTreeRIterator[ T ] 
 	super RBTreePosition[ T ]
-	super BidirectionalIter[ T ]
+	super BidirectionalIterator[ T ]
 	#Creates an iterator that start on the specified node.
 	private init inplace( node: nullable RBTreeNode[ T ] ) do
 		self.node = node
@@ -213,19 +232,18 @@ class RBTreeRIterator[ T ]
 			node = node.parent
 		end
 	end	
+	redef fun is_ok() do
+		return self.node != null
+	end
+	redef fun item() do
+		return self.node.element
+	end
 	redef fun reverse(): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( self.node )
 	end
-end
-
-class RBTreeInterval[ T ] super SortedInterval[ T ]
-	redef type PosType: RBTreePosition[ T ]
-	redef type IterType: RBTreeBiIterator[ T ]
-	
-	redef fun iterator_on( pos ) do
-		return new RBTreeBiIterator[ T ].inplace( pos.node )
+	redef fun clone(): RBTreeRIterator[ T ] do
+		return new RBTreeRIterator[ T ].inplace( self.node )
 	end
-	redef fun invalid_pos(): PosType is abstract	
 end
 
 #Main class of the module. This class models a red black tree that can handle duplicate values.
@@ -235,7 +253,6 @@ end
 #but for the key in maps, whereas T stands for the pair.
 abstract class RBTree[ T, A ]
 	super SortedInsertable[ T ]
-	super DataStructure[ T ]
 	#The tree root
 	private var root: nullable RBTreeNode[ T ]
 	#The comparator object, accessible but not settable.
@@ -310,40 +327,37 @@ abstract class RBTree[ T, A ]
 	#-------------------------------
 	
 	#Returns an iterator that iterates in ascending order.
-	redef fun iterator(): RBTreeBiIterator[ T ] do
+	fun iterator(): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( lowest )
 	end
 	#Returns an iterator that iterates in descending order.
 	fun reverse_iterator(): RBTreeRIterator[ T ] do
 		return new RBTreeRIterator[ T ].inplace( highest )
 	end
-#	redef fun interval(): Interval[ T ] do
-#		return new RBTreeInterval[ T ].between( lowest, highest )
-#	end
-	
-	fun lowest(): RBTreePosition[ T ] do
-		if is_empty then return new RBTreePosition[ T ].invalid
-		return new RBTreePosition[ T ].inplace( self.root.deepest_left )
-	end
-	
-	fun highest(): RBTreePosition[ T ] do
-		if is_empty then return new RBTreePosition[ T ].invalid
-		return new RBTreePosition[ T ].inplace( self.root.deepest_right )
-	end
 
+	#Returns a position on the lowest element's node.
+	private fun lowest(): nullable RBTreeNode[ T ] do
+		if is_empty then return null
+		return self.root.deepest_left
+	end
+	#Return a position on the highest element's node.
+	private fun highest(): nullable RBTreeNode[ T ] do
+		if is_empty then return null
+		return self.root.deepest_right
+	end
 
 	#Returns an iterator on the first encountered occurrence of the
 	#element. The iterator might be invalid if no such element exists.
 	fun find( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( find_node( a ) )
 	end
-	#Returns an iterator on either the element or the previous in
-	#order. Returns an invalid iterator if no such element exists.
+	#Returns an iterator on either the element or, if it does not exist,
+	#the previous in order. Returns an invalid iterator if no such element exists.
 	fun floor( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( floor_node( a ) )
 	end
-	#Returns an iterator on either the element or the next in
-	#order. Returns an invalid iterator if no such element exists.
+	#Returns an iterator on either the element or, if it does not exist,
+	#the next in order. Returns an invalid iterator if no such element exists.
 	fun ceiling( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( ceiling_node( a ) )
 	end
@@ -351,6 +365,9 @@ abstract class RBTree[ T, A ]
 	#-------------------------------
 	#Utility methods.
 	#-------------------------------
+	
+	#Returns a node on either the element or the previous in
+	#order, null if no such element exists.
 	private	fun floor_node( a: A ): nullable RBTreeNode[ T ] do
 		var n = self.root		
 		var floor = n
@@ -362,13 +379,21 @@ abstract class RBTree[ T, A ]
 				floor = n
 				if n.has_right then n = n.right else floor_found = true
 			else
-				floor = n
+				#At this point, we found a match for the element. Since
+				#there might be multiple instances of the same element,
+				#we have to fetch the one that comes first in the iteration.
+				var iter = new RBTreeRIterator[ T ].inplace( n )
+				while iter.is_ok and is_equivalent( a, access_key( iter.node.as( not null ) ) ) do
+					floor = iter.node
+					iter.next					
+				end	
 				floor_found = true
 			end
 		end
 		return floor
 	end
-	
+	#Returns a node on either the element or the next in
+	#order, null if no such element exists.
 	private fun ceiling_node( a: A ): nullable RBTreeNode[ T ] do
 		var n = self.root		
 		var ceiling = n
@@ -380,22 +405,29 @@ abstract class RBTree[ T, A ]
 			else if is_lower( access_key( n ), a ) then
 				if n.has_right then n = n.right else ceiling_found = true
 			else
-				ceiling = n
+				#At this point, we found a match for the element. Since
+				#there might be multiple instances of the same element,
+				#we have to fetch the one that comes first in the iteration.
+				var iter = new RBTreeBiIterator[ T ].inplace( n )
+				while iter.is_ok and is_equivalent( a, access_key( iter.node.as( not null ) ) ) do
+					ceiling = iter.node
+					iter.next					
+				end	
 				ceiling_found = true
 			end
 		end
 		return ceiling
 	end
-	
+	#This method is to be redefined by the inheriting classes. It
+	#extracts the access key part of the node (the element on which the
+	#comparison is made).
 	private fun access_key( n: RBTreeNode[ T ] ): A do
 		return n.element
-	end	
-	
+	end		
 	#Returns true if the comparator returns 0.
 	private fun is_equivalent( lhs: A, rhs: A ): Bool do
 		return self.comparator.call( lhs, rhs ) == 0
-	end
-	
+	end	
 	#Returns true if lhs < rhs, as provided by the comparator.
 	private fun is_lower( lhs: A, rhs: A ): Bool do
 		return self.comparator.call( lhs, rhs ) < 0
@@ -440,6 +472,7 @@ abstract class RBTree[ T, A ]
 		end
 		return n
 	end
+	
 	
 	private fun rotate_left( top: nullable RBTreeNode[ T ] ) do
 		var new_top = top.right
@@ -785,21 +818,12 @@ class TreeMap[ K, V ]
 	end
 end
 
-#class TreeMultiMap[ K, V ]
-#	super RBTree[ MapEntry[ K, V] ]
-#	
-#	init() do
-#		self.root = null
-#		self.comparator = new MapEntryComparator[ K ]( new EquivalenceComparator[ K, K ] )
-#	end
-#	init with_key_comparator( kc: Comparator[ K, K ] ) do
-#		self.root = null
-#		self.comparator = new MapEntryComparator[ K ]( kc )
-#	end
-#	fun iterator_on( k: K ) do
-
-#	end
-#end
+class TreeMultiMap[ K, V ]
+	super RBTree[ MapEntry[ K, V], K ]
+	
+	init() do super end
+	init with_comparator( c) do super end
+end
 
 #This class exists for debug purposes. It tests that its associated
 #tree respects every constraint of a red black tree. Those are the constraints
@@ -811,179 +835,190 @@ end
 #	-The maximum depth of a leaf is never over twice as much as the minimum depth of a leaf.
 #	-Any node's left child is either lower or equivalent. Any node's right child is either
 #	 greater or equivalent.
-#class RBTreeValidator[ T ]
-#	private var tree: RBTree[ T ]
-#	
-#	init ( t: TreeMultiSet[ T ] ) do
-#		self.tree = t
-#	end
-#	
-#	fun validate(): Result do
-#		if self.tree.is_empty then return new Result.valid()
-#		var res = check_root
-#		if not res.is_valid then return res
-#		res = check_red_nodes_children
-#		if not res.is_valid then return res
-#		res = check_depth
-#		if not res.is_valid then return res		
-#		res = check_black_nodes_count	
-#		if not res.is_valid then return res
-#		res = check_binary_semantic
-#		if not res.is_valid then return res
-#		return new Result.valid
-#	end
-#	
-#	private fun check_root(): Result do
-#		if not self.tree.root.is_black then
-#			return new Result.invalid( "root {self.tree.root.element} is not black" )
-#		end
-#		return new Result.valid()
-#	end
-#	
-#	private fun check_red_nodes_children(): Result do
-#		return check_red_node_children( self.tree.root.as( not null ) )
-#	end
-#	
-#	private fun check_red_node_children( n: RBTreeNode[ T ] ): Result do
-#		if n.is_red then
-#			if n.has_left and n.left.is_red then
-#				return new Result.invalid( "red node {n.element} has red left child {n.left.element}" )
-#			else if n.has_right and n.right.is_red then
-#				return new Result.invalid( "red node {n.element} has red right child {n.right.element}" )
-#			end
-#		end
-#		if n.has_left then 
-#			var res = check_red_node_children( n.left.as( not null ) )
-#			if not res.is_valid then return res
-#		end
-#		if n.has_right then
-#			var res = check_red_node_children( n.right.as( not null ) )
-#			if not res.is_valid then return res
-#		end
-#		return new Result.valid()
-#	end
-#	
-#	private fun check_black_nodes_count(): Result do
-#		var res = check_node_count( self.tree.root.as( not null ) )
-#		if res.is_valid then return new Result.valid else return new Result.invalid( res.message )
-#	end
-#	
-#	private fun check_node_count( n: RBTreeNode[ T ] ): ValuedResult[ Int ] do
-#		var left_count = 0
-#		var right_count = 0
-#		if n.has_left then 
-#			var res = check_node_count( n.left.as( not null ) )
-#			if not res.is_valid then return res
-#			left_count = res.value
-#		end
-#		if n.has_right then 
-#			var res = check_node_count( n.right.as( not null ) )
-#			if not res.is_valid then return res
-#			right_count = res.value
-#		end
-#		if left_count != right_count then
-#			return new ValuedResult[ Int ].invalid( "{n.element} has {left_count} black nodes in its left subtree but {right_count} in its right" )
-#		end
-#		return new ValuedResult[ Int ].valid( left_count )
-#	end
-#	
-#	private fun check_depth(): Result do
-#		var count = 0
-#		var iter = self.tree.iterator
-#		while iter.is_ok do 
-#			count +=1
-#			iter.next
-#		end
-#		var max_depth = max_node_depth( self.tree.root.as( not null ) )
-#		var min_depth = min_node_depth( self.tree.root.as( not null ) )
-#		
-#		if min_depth * 2 < max_depth then 
-#			return new Result.invalid( "the tree's maximum depth {max_depth} is over twice as much as min depth {min_depth}" )
-#		end
-#		return new Result.valid()
-#	end
-#	
-#	private fun max_node_depth( n: RBTreeNode[ T ] ): Int do
-#		var max_depth = 1
-#		var left_max_depth = 0
-#		var right_max_depth = 0
-#		if n.has_left then left_max_depth = max_node_depth( n.left.as( not null ) )
-#		if n.has_right then right_max_depth = max_node_depth( n.right.as( not null ) )
-#		if left_max_depth < right_max_depth then max_depth += right_max_depth else max_depth += left_max_depth
-#		return max_depth
-#	end
-#	
-#	private fun min_node_depth( n: RBTreeNode[ T ] ): Int do
-#		var min_depth = 1
-#		var left_min_depth = 0
-#		var right_min_depth = 0
-#		if n.has_left then left_min_depth = min_node_depth( n.left.as( not null ) )
-#		if n.has_right then right_min_depth = min_node_depth( n.right.as( not null ) )
-#		if left_min_depth < right_min_depth then min_depth += left_min_depth else min_depth += right_min_depth
-#		return min_depth
-#	end
-#	
-#	private fun check_binary_semantic(): Result do
-#		if self.tree.is_empty then return new Result.valid
-#		var nodes_to_visit = new List[ RBTreeNode[ T] ]
-#		var n = self.tree.root.as( not null )
-#		nodes_to_visit.push( n )
-#		while not nodes_to_visit.is_empty do
-#			n = nodes_to_visit.shift
-#			var res = check_node_binary_semantic( n )
-#			if not res.is_valid then return res
-#			if n.has_left then nodes_to_visit.push( n.left.as( not null ) )
-#			if n.has_right then nodes_to_visit.push( n.right.as( not null ) )						
-#		end		
-#		return new Result.valid
-#	end
-#	
-#	private fun check_node_binary_semantic( n: RBTreeNode[ T ] ): Result do
-#		if n.has_left and 
-#			not ( self.tree.is_lower( n.left.element, n.element ) or
-#				self.tree.is_equivalent( n.left.element, n.element ) ) then
-#			return new Result.invalid( "{n.element} has left child {n.left.element} which violates binary search semantics")
-#		else if n.has_right and
-#			not ( self.tree.is_lower( n.element, n.right.element ) or 
-#				self.tree.is_equivalent( n.element, n.right.element ) ) then
-#			return new Result.invalid( "{n.element} has right child {n.right.element} which violates binary search semantics")		
-#		end
-#		return new Result.valid
-#	end
-#	
-#	fun tree_string(): String do
-#		if self.tree.is_empty then 
-#			return "empty tree"
-#		end
-#		var res = ""
-#		var nodes_to_visit = new List[ RBTreeNode[ T ] ]
-#		nodes_to_visit.push( self.tree.root.as( not null ) )
-#		while not nodes_to_visit.is_empty do
-#			var n = nodes_to_visit.first
-#			nodes_to_visit.shift
-#			if self.tree.root == n then
-#				res += "root: " + node_content_string( n )
-#			else
-#				res += "node: " + node_content_string( n )
-#			end
-#			if n.has_left then
-#				res += " left: " + node_content_string( n.left.as( not null ) )
-#				nodes_to_visit.push( n.left.as( not null ) )
-#			end
-#			if n.has_right then
-#				res += " right: " + node_content_string( n.right.as( not null ) )
-#				nodes_to_visit.push( n.right.as( not null ) )
-#			end
-#			res += "\n"
-#		end
-#		return res
-#	end
-#	
-#	private fun node_content_string( n: RBTreeNode[ T ] ): String do
-#		var res = "\{ {n.element}, "
-#		if n.is_red then res += "red \}" else res += "black \}"
-#		return res
-#	end
-
-#end
+class RBTreeValidator
+	private var tree: RBTree[ Object, Object ]
+	#Constructs a validator for the given tree.
+	init ( t: RBTree[ Object, Object ] ) do
+		self.tree = t
+	end
+	#Launches the validation. It stops at the first error encountered.
+	fun validate(): Result do
+		if self.tree.is_empty then return new Result.valid()
+		var res = check_root
+		if not res.is_valid then return res
+		res = check_red_nodes_children
+		if not res.is_valid then return res
+		res = check_balance
+		if not res.is_valid then return res		
+		res = check_black_nodes_count	
+		if not res.is_valid then return res
+		res = check_binary_semantic
+		if not res.is_valid then return res
+		return new Result.valid
+	end
+	
+	#Returns a string view of the tree, for debugging purposes mainly.
+	fun tree_string(): String do
+		if self.tree.is_empty then 
+			return "empty tree"
+		end
+		var res = ""
+		var nodes_to_visit = new List[ RBTreeNode[ Object ] ]
+		nodes_to_visit.push( self.tree.root.as( not null ) )
+		while not nodes_to_visit.is_empty do
+			var n = nodes_to_visit.first
+			nodes_to_visit.shift
+			if self.tree.root == n then
+				res += "root: " + node_content_string( n )
+			else
+				res += "node: " + node_content_string( n )
+			end
+			if n.has_left then
+				res += " left: " + node_content_string( n.left.as( not null ) )
+				nodes_to_visit.push( n.left.as( not null ) )
+			end
+			if n.has_right then
+				res += " right: " + node_content_string( n.right.as( not null ) )
+				nodes_to_visit.push( n.right.as( not null ) )
+			end
+			res += "\n"
+		end
+		return res
+	end
+	
+	#-------------------------------
+	#Private
+	#-------------------------------
+	
+	#Checks that the root is black.
+	private fun check_root(): Result do
+		if not self.tree.root.is_black then
+			return new Result.invalid( "root {self.tree.root.element} is not black" )
+		end
+		return new Result.valid()
+	end
+	#Checks that no red node has a red child.
+	private fun check_red_nodes_children(): Result do
+		return check_red_node_children( self.tree.root.as( not null ) )
+	end
+	#Recursively checks for the red node children rule.
+	private fun check_red_node_children( n: RBTreeNode[ Object ] ): Result do
+		if n.is_red then
+			if n.has_left and n.left.is_red then
+				return new Result.invalid( "red node {n.element} has red left child {n.left.element}" )
+			else if n.has_right and n.right.is_red then
+				return new Result.invalid( "red node {n.element} has red right child {n.right.element}" )
+			end
+		end
+		if n.has_left then 
+			var res = check_red_node_children( n.left.as( not null ) )
+			if not res.is_valid then return res
+		end
+		if n.has_right then
+			var res = check_red_node_children( n.right.as( not null ) )
+			if not res.is_valid then return res
+		end
+		return new Result.valid()
+	end
+	#Checks that every simple path from a node to its leaf has the same amount of black
+	#nodes.
+	private fun check_black_nodes_count(): Result do
+		var res = check_node_count( self.tree.root.as( not null ) )
+		if res.is_valid then return new Result.valid else return new Result.invalid( res.message )
+	end
+	#Recursively checks for the black node paths rule. 
+	private fun check_node_count( n: RBTreeNode[ Object ] ): ValuedResult[ Int ] do
+		var left_count = 0
+		var right_count = 0
+		if n.has_left then 
+			var res = check_node_count( n.left.as( not null ) )
+			if not res.is_valid then return res
+			left_count = res.value
+		end
+		if n.has_right then 
+			var res = check_node_count( n.right.as( not null ) )
+			if not res.is_valid then return res
+			right_count = res.value
+		end
+		if left_count != right_count then
+			return new ValuedResult[ Int ].invalid( "{n.element} has {left_count} black nodes in its left subtree but {right_count} in its right" )
+		end
+		return new ValuedResult[ Int ].valid( left_count )
+	end	
+	
+	#This is method assures that the tree is balanced by enforcing its main rule: the longest
+	#path to a leaf is never above twice the shorted path to a leaf.
+	private fun check_balance(): Result do
+		var count = 0
+		var iter = self.tree.iterator
+		while iter.is_ok do 
+			count +=1
+			iter.next
+		end
+		var max_depth = max_node_depth( self.tree.root.as( not null ) )
+		var min_depth = min_node_depth( self.tree.root.as( not null ) )
+		
+		if min_depth * 2 < max_depth then 
+			return new Result.invalid( "the tree's maximum depth {max_depth} is over twice as much as min depth {min_depth}" )
+		end
+		return new Result.valid()
+	end
+	#Returns longest path to a leaf's length
+	private fun max_node_depth( n: RBTreeNode[ Object ] ): Int do
+		var max_depth = 1
+		var left_max_depth = 0
+		var right_max_depth = 0
+		if n.has_left then left_max_depth = max_node_depth( n.left.as( not null ) )
+		if n.has_right then right_max_depth = max_node_depth( n.right.as( not null ) )
+		if left_max_depth < right_max_depth then max_depth += right_max_depth else max_depth += left_max_depth
+		return max_depth
+	end
+	#Returns shortest path to a leaf's length
+	private fun min_node_depth( n: RBTreeNode[ Object ] ): Int do
+		var min_depth = 1
+		var left_min_depth = 0
+		var right_min_depth = 0
+		if n.has_left then left_min_depth = min_node_depth( n.left.as( not null ) )
+		if n.has_right then right_min_depth = min_node_depth( n.right.as( not null ) )
+		if left_min_depth < right_min_depth then min_depth += left_min_depth else min_depth += right_min_depth
+		return min_depth
+	end
+	
+	#Enforces the binary search tree semantics: elements on the left are lower (or equivalent)
+	#and elements on the right are higher (or equivalent)
+	private fun check_binary_semantic(): Result do
+		if self.tree.is_empty then return new Result.valid
+		var nodes_to_visit = new List[ RBTreeNode[ Object ] ]
+		var n = self.tree.root.as( not null )
+		nodes_to_visit.push( n )
+		while not nodes_to_visit.is_empty do
+			n = nodes_to_visit.shift
+			var res = check_node_binary_semantic( n )
+			if not res.is_valid then return res
+			if n.has_left then nodes_to_visit.push( n.left.as( not null ) )
+			if n.has_right then nodes_to_visit.push( n.right.as( not null ) )						
+		end		
+		return new Result.valid
+	end
+	#Recursively enforces the binary semantic.
+	private fun check_node_binary_semantic( n: RBTreeNode[ Object ] ): Result do
+		if n.has_left and 
+			not ( self.tree.is_lower( n.left.element, n.element ) or
+				self.tree.is_equivalent( n.left.element, n.element ) ) then
+			return new Result.invalid( "{n.element} has left child {n.left.element} which violates binary search semantics")
+		else if n.has_right and
+			not ( self.tree.is_lower( n.element, n.right.element ) or 
+				self.tree.is_equivalent( n.element, n.right.element ) ) then
+			return new Result.invalid( "{n.element} has right child {n.right.element} which violates binary search semantics")		
+		end
+		return new Result.valid
+	end
+	
+	#Returns a string of the node's content.	
+	private fun node_content_string( n: RBTreeNode[ Object ] ): String do
+		var res = "\{ {n.element}, "
+		if n.is_red then res += "red \}" else res += "black \}"
+		return res
+	end
+end
 
