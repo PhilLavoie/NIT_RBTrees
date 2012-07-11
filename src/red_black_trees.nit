@@ -147,8 +147,13 @@ class RBTreePosition[ T ]
 	fun equals( rhs: Compared ): Bool do
 		return self.node == rhs.node
 	end
-	
-	#TODO add clone method.
+
+	redef fun ==( rhs ) do
+		if rhs isa RBTreePosition[ T ] then
+			return self.node == rhs.node
+		end
+		return false
+	end
 end
 
 #Bidirectional iterator.
@@ -257,20 +262,34 @@ abstract class RBTree[ T, A ]
 	private var root: nullable RBTreeNode[ T ]
 	#The comparator object, accessible but not settable.
 	var comparator: Comparator[ A, A ]
+	
+	#-------------------------------
+	#Constructors.
+	#-------------------------------
+		
 	#Creates a new red black tree with the equivalence comparator
 	init() do
 		self.root = null
 		self.comparator = new EquivalenceComparator[ A, A ]
 	end
-	#Creats a new red black tree with the given comparator.
+	#Creats a new red black tree with the given comparator. Note that only the lower semantic is used
+	#for insertion but that the equivalence (equals) is also used when removing/retrieving (to identify
+	#the element).
 	init with_comparator( c: Comparator[ A, A ] ) do
 		self.comparator = c
 	end	
+	
+	#-------------------------------
+	#Public interface.
+	#-------------------------------
+	
 	#Adds the element to the tree. Rebalancing might be triggered. If the element
 	#already exists, then it is placed as a right child of the rightmost duplicate.
 	redef fun insert( element: T ) do
 		insert_new_node( element )
 	end
+	
+	#TODO update doc when done.
 	#Removes at the location indicated by the iterator. The iterator is moved to the next
 	#element according to its iteration semantic.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
@@ -292,17 +311,20 @@ abstract class RBTree[ T, A ]
 		delete_node( r )
 		return iter
 	end	
+	
 	#Removes all element from the tree and puts it in an empty state. Doing this
-	#invalidates all iterator and failure to acknowledge so is a gamble to enter
+	#invalidates all iterator and failure to acknowledge this is a gamble to enter
 	#the world of undefined behavior.
 	fun clear() do
 		self.root = null
 	end
+	
 	#Returns true if the tree is empty, false otherwise.
 	fun is_empty(): Bool do
 		return self.root == null
 	end
-	#Returns the number of elements.
+	
+	#Returns the number of elements. O(n) (faster than with the iteration)
 	fun size(): Int do
 		if is_empty then return 0
 		var count = 0
@@ -317,35 +339,12 @@ abstract class RBTree[ T, A ]
 		end
 		return count
 	end
+	
 	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
 	fun has( e: A ): Bool do
 		return find_node( e ) != null
 	end	
 	
-	#-------------------------------
-	#Iterator methods.
-	#-------------------------------
-	
-	#Returns an iterator that iterates in ascending order.
-	fun iterator(): RBTreeBiIterator[ T ] do
-		return new RBTreeBiIterator[ T ].inplace( lowest )
-	end
-	#Returns an iterator that iterates in descending order.
-	fun reverse_iterator(): RBTreeRIterator[ T ] do
-		return new RBTreeRIterator[ T ].inplace( highest )
-	end
-
-	#Returns a position on the lowest element's node.
-	private fun lowest(): nullable RBTreeNode[ T ] do
-		if is_empty then return null
-		return self.root.deepest_left
-	end
-	#Return a position on the highest element's node.
-	private fun highest(): nullable RBTreeNode[ T ] do
-		if is_empty then return null
-		return self.root.deepest_right
-	end
-
 	#Returns an iterator on the first encountered occurrence of the
 	#element. The iterator might be invalid if no such element exists.
 	fun find( a: A ): RBTreeBiIterator[ T ] do
@@ -362,9 +361,29 @@ abstract class RBTree[ T, A ]
 		return new RBTreeBiIterator[ T ].inplace( ceiling_node( a ) )
 	end
 	
+	#Returns an iterator that iterates in ascending order.
+	fun iterator(): RBTreeBiIterator[ T ] do
+		return new RBTreeBiIterator[ T ].inplace( lowest_node )
+	end
+	#Returns an iterator that iterates in descending order.
+	fun reverse_iterator(): RBTreeRIterator[ T ] do
+		return new RBTreeRIterator[ T ].inplace( highest_node )
+	end
+	
 	#-------------------------------
 	#Utility methods.
 	#-------------------------------
+	
+	#Returns a position on the lowest element's node.
+	private fun lowest_node(): nullable RBTreeNode[ T ] do
+		if is_empty then return null
+		return self.root.deepest_left
+	end
+	#Return a position on the highest element's node.
+	private fun highest_node(): nullable RBTreeNode[ T ] do
+		if is_empty then return null
+		return self.root.deepest_right
+	end
 	
 	#Returns a node on either the element or the previous in
 	#order, null if no such element exists.
@@ -392,6 +411,7 @@ abstract class RBTree[ T, A ]
 		end
 		return floor
 	end
+	
 	#Returns a node on either the element or the next in
 	#order, null if no such element exists.
 	private fun ceiling_node( a: A ): nullable RBTreeNode[ T ] do
@@ -418,20 +438,24 @@ abstract class RBTree[ T, A ]
 		end
 		return ceiling
 	end
-	#This method is to be redefined by the inheriting classes. It
+	
+	#IMPORTANT: This method is to be redefined by the inheriting classes. It
 	#extracts the access key part of the node (the element on which the
 	#comparison is made).
 	private fun access_key( n: RBTreeNode[ T ] ): A do
 		return n.element
-	end		
+	end	
+		
 	#Returns true if the comparator returns 0.
 	private fun is_equivalent( lhs: A, rhs: A ): Bool do
 		return self.comparator.call( lhs, rhs ) == 0
 	end	
+	
 	#Returns true if lhs < rhs, as provided by the comparator.
 	private fun is_lower( lhs: A, rhs: A ): Bool do
 		return self.comparator.call( lhs, rhs ) < 0
 	end
+	
 	#Emplaces the node to the specified location. Nodes linking on the destination
 	#are updated properly to link on the moved node. Works if the node is null.
 	private fun move_node_to( n: nullable RBTreeNode[ T ], dest: RBTreeNode[ T ] ) do
@@ -444,14 +468,7 @@ abstract class RBTree[ T, A ]
 		end
 		if n != null then n.parent = dest.parent
 	end	
-	#Returns the node holding the replacement value of the node, or the node itself
-	#if it does not have two children. If it does, then this function return the
-	#in-order predecessor (rightmost of the left subtree).
-	private fun find_replacement( n: RBTreeNode[ T ] ): RBTreeNode[ T ] do
-		if not n.has_left or not n.has_right then return n
-		#If we made it here, the node has two children.
-		return n.left.deepest_right
-	end	
+	
 	#Returns the first node associated with the element found, null
 	#if no such element exists in the tree.
 	private fun find_node( a: A ): nullable RBTreeNode[ T ] do
@@ -467,13 +484,18 @@ abstract class RBTree[ T, A ]
 			else if is_equivalent( a, access_key( n ) ) then
 				node_found = true			
 			else
+				#TODO remove after debugging?
 				assert false else print "Unknown relation between {n} and {access_key( n )}"
 			end
 		end
 		return n
 	end
 	
+	#TODO remove the nullable part, since there is no point in rotating on a null node.
 	
+	#Rotates left across the provided node. The node becomes the left successor
+	#of its right child and inherits its left subtree as its own right
+	#subtree, guaranteeing that no rules are violated.
 	private fun rotate_left( top: nullable RBTreeNode[ T ] ) do
 		var new_top = top.right
 		#Move the new top's left sub tree to the previous
@@ -496,6 +518,9 @@ abstract class RBTree[ T, A ]
 		new_top.left = top
 	end
 	
+	#Rotates right across the provided node. The node becomes the right successor
+	#of its left child and inherits its right subtree as its own left
+	#subtree, guaranteeing that no rules are violated.
 	private fun rotate_right( top: nullable RBTreeNode[ T ] ) do
 		var new_top = top.left
 		#Move the new top's right sub tree to the previous
@@ -518,59 +543,12 @@ abstract class RBTree[ T, A ]
 		new_top.right = top
 	end
 	
-	private fun is_valid_node( node: nullable RBTreeNode[ T ] ): Bool do
-		return node != null
-	end
-	
-	private fun find_insertion_node( a: A ): nullable RBTreeNode[ T ] do
-		if self.root == null then return null	
-		var n = self.root
-		var location_found = false
-		while not location_found do
-			if is_lower( a, access_key( n.as( not null ) ) ) then
-				if n.has_left() then
-					n = n.left
-				else 
-					location_found = true
-				end
-			else 
-				if n.has_right() then
-					n = n.right
-				else
-					location_found = true					
-				end
-			end
-		end
-		return n
-	end
-	
-	private fun insert_node_under( n: RBTreeNode[ T ], p: nullable RBTreeNode[ T ] ) do
-		if p == null then return
-		if is_lower( access_key( n), access_key( p.as( not null ) ) ) then
-			p.left = n
-		else
-			p.right = n
-		end
-		n.parent = p
-	end
-	
-	private fun insert_new_node( element: T ) do
-		var new_node = new RBTreeNode[ T ]( element )
-		insert_node_under( new_node, find_insertion_node( access_key( new_node ) ) )
-		#Root insertion
-		if self.root == null then self.root = new_node
-		insert_rebalance( new_node )		
-	end
-	
-	#Creates a red node initialized with the element.
-	private fun create_node( element: T ): RBTreeNode[ T ] do
-		return new RBTreeNode[ T ]( element )
-	end
 	#Method for testing if a node is red. Returns true if and only if
-	#the node if not null and is red.
+	#the node is not null and is red.
 	private fun is_red( n: nullable RBTreeNode[ T ] ): Bool do
 		return n != null and n.is_red
 	end
+	
 	#Method for testing if a node is black. Returns true either if
 	#the node is null (a leaf) or if the node is black.
 	private fun is_black( n: nullable RBTreeNode[ T ] ): Bool do
@@ -581,7 +559,8 @@ abstract class RBTree[ T, A ]
 	#Deletion methods.
 	#-------------------------------
 	
-	#Assumes the node has at most one child.
+	#Entry point of the deletion balancing algorithm. Prior to calling this however,
+	#the user has to make sure the deleted node has at most one child.
 	private fun delete_node( n: RBTreeNode[ T ] ): nullable RBTreeNode[ T ] do
 		assert not ( n.has_left and n.has_right )
 		
@@ -606,6 +585,15 @@ abstract class RBTree[ T, A ]
 		return child
 	end
 	
+	#Returns the node holding the replacement value of the node, or the node itself
+	#if it does not have two children. If it does, then this function returns the
+	#in-order predecessor (rightmost of the left subtree).
+	private fun find_replacement( n: RBTreeNode[ T ] ): RBTreeNode[ T ] do
+		if not n.has_left or not n.has_right then return n
+		#If we made it here, the node has two children.
+		return n.left.deepest_right
+	end		
+	
 	#assumption: n is black and therefore n has a sibling (non root case)
 	private fun delete_rebalance( n: RBTreeNode[ T ] ) do
 		assert n.is_black
@@ -620,11 +608,13 @@ abstract class RBTree[ T, A ]
 		end
 	end
 	
+	#If the root is deleted, then there is nothing to be done.
 	private fun delete_rebalance_root( n: RBTreeNode[ T ] ) do
 		#Do nothing
 	end
 	
-	#Since n is black, n has a sibling and it is black since p is red.
+	#When deleting a black node under a red parent, the rebalancing
+	#depends mostly on the children of the sibling.
 	private fun delete_rebalance_red_parent( n: RBTreeNode[ T ] ) do
 		assert n.is_black
 		assert n.parent.is_red
@@ -646,6 +636,9 @@ abstract class RBTree[ T, A ]
 		end
 	end
 	
+	#Deleting a black node under a black parent can be more taxing,
+	#since there is the possibility that the whole subtree loses a black node
+	#in every path to the leaves.
 	private fun delete_rebalance_black_parent( n: RBTreeNode[ T ] ) do
 		assert n.is_black
 		assert n.parent.is_black
@@ -697,11 +690,56 @@ abstract class RBTree[ T, A ]
 		end
 	end
 	
-	
-	
 	#-------------------------------
 	#Insertion methods.
 	#-------------------------------
+	
+	#Finds the appropriate parent node of the newly inserted element. This method
+	#does NOTE mutate anything, it just returns the appropriate parent, null if 
+	#the tree is empty (if the element should become the root).
+	private fun find_insertion_node( a: A ): nullable RBTreeNode[ T ] do
+		if self.root == null then return null	
+		var n = self.root
+		var location_found = false
+		while not location_found do
+			if is_lower( a, access_key( n.as( not null ) ) ) then
+				if n.has_left() then
+					n = n.left
+				else 
+					location_found = true
+				end
+			else 
+				if n.has_right() then
+					n = n.right
+				else
+					location_found = true					
+				end
+			end
+		end
+		return n
+	end
+	
+	#Inserts the node under the parent and updates the associated links.
+	private fun insert_node_under( n: RBTreeNode[ T ], p: nullable RBTreeNode[ T ] ) do
+		if p == null then return
+		if is_lower( access_key( n), access_key( p.as( not null ) ) ) then
+			p.left = n
+		else
+			p.right = n
+		end
+		n.parent = p
+	end
+	
+	#Inserts the element at the correct spot and launches the insertion rebalancing
+	#algorithm.
+	private fun insert_new_node( element: T ) do
+		var new_node = new RBTreeNode[ T ]( element )
+		insert_node_under( new_node, find_insertion_node( access_key( new_node ) ) )
+		#Root insertion
+		if self.root == null then self.root = new_node
+		insert_rebalance( new_node )		
+	end
+	
 	
 	#To be called on the newly created node for the new inserted element.
 	private fun insert_rebalance( n: RBTreeNode[ T ] ) do
@@ -799,17 +837,21 @@ class MapEntry[ K, V ]
 		self.key = k
 		self.value = v
 	end	
+	
+	redef fun to_s() do
+		return "( key: {key}, value: {value} )"
+	end
 end
 
 class TreeMap[ K, V ]
-	super RBTree[ MapEntry[ K, V], K ]
+	super RBTree[ MapEntry[ K, V ], K ]
 	init() do super end
 	init with_comparator( c ) do super end
 	
 	#Inserts the element in the tree. If the element already exists, then
 	#it is replaced.
 	redef fun insert( e ) do
-		var n = find_node( e )
+		var n = find_node( e.key )
 		if n == null then super else n.element = e
 	end	
 	
@@ -823,6 +865,10 @@ class TreeMultiMap[ K, V ]
 	
 	init() do super end
 	init with_comparator( c) do super end
+	
+	redef fun access_key( n ) do
+		return n.element.key
+	end
 end
 
 #This class exists for debug purposes. It tests that its associated
@@ -1003,12 +1049,12 @@ class RBTreeValidator
 	#Recursively enforces the binary semantic.
 	private fun check_node_binary_semantic( n: RBTreeNode[ Object ] ): Result do
 		if n.has_left and 
-			not ( self.tree.is_lower( n.left.element, n.element ) or
-				self.tree.is_equivalent( n.left.element, n.element ) ) then
+			not ( self.tree.is_lower( self.tree.access_key( n.left.as( not null ) ), self.tree.access_key( n.as( not null ) ) ) or
+				self.tree.is_equivalent( self.tree.access_key( n.left.as( not null ) ), self.tree.access_key( n.as( not null ) ) ) ) then
 			return new Result.invalid( "{n.element} has left child {n.left.element} which violates binary search semantics")
 		else if n.has_right and
-			not ( self.tree.is_lower( n.element, n.right.element ) or 
-				self.tree.is_equivalent( n.element, n.right.element ) ) then
+			not ( self.tree.is_lower( self.tree.access_key( n.as( not null ) ), self.tree.access_key( n.right.as( not null ) ) ) or 
+				self.tree.is_equivalent( self.tree.access_key( n.as( not null ) ), self.tree.access_key( n.right.as( not null ) ) ) ) then
 			return new Result.invalid( "{n.element} has right child {n.right.element} which violates binary search semantics")		
 		end
 		return new Result.valid

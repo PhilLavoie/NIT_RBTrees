@@ -1,14 +1,4 @@
-#interface Position[ T ]
-#	type Compared: Position[ T ]
-
-#	fun is_ok(): Bool is abstract
-#	fun item: T is abstract
-#	fun equals( c: Compared ): Bool is abstract
-#end
-
 redef interface Iterator[ T ]
-#	super Position[ T ]
-#	fun next() is abstract
 	fun clone(): Iterator[ T ] is abstract
 end
 
@@ -21,8 +11,44 @@ interface BidirectionalIterator[ T ] super ReversibleIterator[ T ]
 end
 
 interface RandomAccessIterator[ T ] super BidirectionalIterator[ T ]
-#	type PosType: Position[ T ]
-#	fun move_to( p: PosType ) is abstract
+#TODO only a stub, still have to define what it might look like.
+end
+
+#Iterators passed on must be able to compare with each other, specifically
+#this has to be supported: start == stop.
+class BoundedIterator[ T ]
+	super Iterator[ T ]
+	
+	private var start: Iterator[ T ]
+	private var stop: Iterator[ T ]
+	
+	init inclusive( start: Iterator[ T ], stop: Iterator[ T ] ) do
+		self.start = start
+		stop.next
+		self.stop = stop
+	end
+	
+	init exclusive( start: Iterator[ T ], stop: Iterator[ T ] ) do
+		self.start = start
+		self.stop = stop
+	end
+	
+	redef fun is_ok() do
+		return self.start.is_ok and not ( self.start == self.stop )
+	end
+	
+	redef fun item() do
+		return self.start.item
+	end
+	
+	redef fun next() do
+		self.start.next
+	end
+	
+	redef fun clone() do
+		return new BoundedIterator[ T ].exclusive( self.start, self.stop )
+	end
+	
 end
 
 #Class for compatibility with the standard iterators. Do no call

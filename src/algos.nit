@@ -3,9 +3,13 @@ import inserters
 import iterators
 
 class Algos
-	fun equals( lhs_iter: Iterator[ nullable Object ], rhs_iter: Iterator[ nullable Object ] ): Bool do
+	fun equals( 
+		lhs_iter: Iterator[ nullable Object ],
+		rhs_iter: Iterator[ nullable Object ], 
+		equals: Equals[ nullable Object, nullable Object ] 
+		): Bool do
 		while lhs_iter.is_ok and rhs_iter.is_ok do
-			if lhs_iter.item != rhs_iter.item then return false
+			if not equals.call( lhs_iter.item , rhs_iter.item ) then return false
 			lhs_iter.next
 			rhs_iter.next
 		end
@@ -20,33 +24,23 @@ class Algos
 		end
 	end
 	
-	fun size( iter: Iterator[ nullable Object ] ): Int do
-		var res = 0
-		while iter.is_ok do
-			res += 1
-			iter.next
-		end
-		return res
-	end
-	
-	fun count( iter: Iterator[ nullable Object ], e: nullable Object, equals: Equals[ nullable Object, nullable Object ] ): Int do
-		var res = 0
-		while iter.is_ok do
-			if equals.call( iter.item, e ) then res += 1
-			iter.next
-		end
-		return res
-	end
-	
-	#TODO replace this by find first and find last, or something like first_if and last_if
-	#(meaning such that)
-#	fun find( iter: Iterator[ nullable Object ], e: nullable Object ): Iterator[ nullable Object ] do
+#	fun count( iter: Iterator[ nullable Object ], e: nullable Object, equals: Equals[ nullable Object, nullable Object ] ): Int do
+#		var res = 0
 #		while iter.is_ok do
-#			if iter.item is e or iter.item == e then break
+#			if equals.call( iter.item, e ) then res += 1
 #			iter.next
 #		end
-#		return iter
+#		return res
 #	end
+	
+	fun size( iter: Iterator[ nullable Object ] ): Int do
+		var size = 0
+		while iter.is_ok do
+			size += 1
+			iter.next
+		end
+		return size
+	end
 	
 	fun copy( iter: Iterator[ nullable Object ], inserter: Inserter[ nullable Object ] ) do
 		while iter.is_ok do
