@@ -1,3 +1,81 @@
-For the future:
+Packages provided for the extension of the NIT standard library. In particular, 4 collections are provided based
+on the red black tree: TreeSet, TreeMultiset, TreeMap and TreeMultimap. One package provides all the source needed
+to make those collections work. The other package (tests), is one for automating regression testing.
+
+Design choices:
+	-Minimal convenience for first release-> But the power to do everything.
+	-Some kind of conformity with the collections in NIT library has been provided, but no direct plugging under
+	 a superclass.
+	-Minimal removal facilities through iterators: prevents a lot of confusion and different naming conventions
+	 (remove_at can be used to implement remove, remove_once, remove_all, remove_entirely, remove_key, remove_once_key and so on)
+	-Retrievals returns iterators. Why? Because it is better suited for NIT than elements, and it just happens
+	 to be my favorite way of doing this. Example of why it is better suited: lowest(): Element, if the collection
+	 is empty than the proper way of doing this would be to abort the program, since Element might not be nullable.
+	 That is ok because the person didn't probably know that the tree is empty. Same as trying to access an out of bounds
+	 element on an array. This is a situation where it isn't so black and white:
+	 ceiling( e: Element ): Element. Someone would like to know what is the first element
+	 closest to e, but higher if e does not exist. Should the program abort because no elements satisfying the condition
+	 exists??? Isn't ceiling a way of asking if there is an element higher than e that exists? One could argue that
+	 we could provide a has_ceiling method and start bloating the interface this way for every other method we add (floor, lower, higher).
+	 There are other ways to handle the problems, but IMHO, the iterator way is the simplest yet most powerful way of doing this
+	 (gives a lot of flexibility) and it just happens to be the choice made for removals as well (convenient, isn't it?).
+	 Therefore:
+	 remove_at( ceiling( e ) ) removes the ceiling, if it exists, does nothing if it doesn't.
+	 Alternative NOT chosen:
+	 if has_ceiling( e ) then remove( ceiling( e ) ) end
+	 This solution isn't perfect. In the example above the client has less code to write. But if he wanted to remove e
+	 he would have more code to write:
+	 remove_at( find( e ) )
+	 Instead of
+	 remove( e )
+	 Convenient facilities should be added in the future. Another important downfall is that later in this text I propose
+	 another iterator for linear unordered access (for manipulating values in maps for example). However, doing this might
+	 cause a problem: why should the collection decide what kind of iterator to return? This opens a whole new discussion
+	 that is very interesting but out of the scope of this project. A solution would be to return a positional object from which
+	 any iterator can be constructed but then again someone could just argue: why would someone want an unordered iterator starting
+	 elsewhere than from the root? Open question.
+	 
+
+What has been left aside:
+ -Support for operations on values for maps. Is it:
+ 	-Required
+ 	-Advisable
+ -Some convenient methods have been added and some weren't. The choices are mostly arbitrary and further conveniences
+  can easily be provided. See next point.
+ -All facilities imaginable that uses the subset proposed are still to be implemented. Following are some examples
+  and some discussion on what should be considered if they are to be implemented.
+ 	-For instance, pop_highest does not exist, but can be done like this: 
+ 	 tree.remove_at( tree.highest() ) or tree.remove_at( tree.reverse_iterator )
+  	-Another example: higher and lower methods. (Returns the first element lower or higher than the provided element). Can be done
+   	 with floor and ceiling. Example: 
+  	 var f = tree.floor( 50 )
+  	 if f.item == 50 then f.previous end
+  	 #Now f is on the lower element of 50, might be invalid.
+  	 In fact, if it is to be implemented, it'll be exactly like that. NOTE that the interface has been designed in
+  	 such a way that it works for BOTH multi and single version of trees (floor returns an iterator on the first element
+  	 in the ascending order that corresponds to the one provided, the previous one if it does not exist).
+ 	-Provide an insert_all, for convenience (insert_all( c:Collection...) )
+	-Provide a remove_all -> This is more ambiguous. What does remove_all means on a multiset for example? Remove all 
+	 occurrences or remove one occurrence of every provided element. Because for a set remove_all surely means the latter.
+	 And on a multiset for example, does it mean remove_all_once or remove_every_possible_element_that_matches??? See next
+	 point.
+	-Is it worth doing something like this: remove_once and remove_entirely for multi versions?
+	 Remove entirely can now be done like this:
+	 var f = tree.floor( 50 )
+	 if f.item == 50 then
+		 while f.item == 50 do
+		    f = tree.remove_at( 50 )
+		 end
+	 end
+	 Remove once can be done like this:
+	 tree.remove_at( tree.find( 50 ) )
+	-operator [] on map for convenience.
+ -Provide a way to extract all keys in O(n). I'm still not sure what would be the point of that, but it's possible.
+ -Extract all values in O(n), same as above.
+ -To answer both previous points, maybe it's just better to implement a breadth first iterator or something like
+  that that does not provide any order, but guarantees a O(n) iteration.
+ 
+
+What's left for testing:
 -Test with different comparators
 -Test multimaps with duplicate keys having different values
