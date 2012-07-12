@@ -123,7 +123,6 @@ end
 #higher than the iterators. Positions are meant to be created by this module's
 #classes only.
 class RBTreePosition[ T ] 
-#	super Position[ T ]
 	type Compared: RBTreePosition[ T ]
 	#The tree node.
 	private var node: nullable RBTreeNode[ T ]
@@ -135,12 +134,6 @@ class RBTreePosition[ T ]
 	private init invalid() do
 		self.node = null
 	end	
-#	fun is_ok(): Bool do
-#		return self.node != null
-#	end
-#	fun item(): T do
-#		return self.node.element
-#	end
 	#Two positions are equals if both are located on the same place
 	#on the tree, not if both are the same object (but returns true
 	#when they are).
@@ -148,6 +141,7 @@ class RBTreePosition[ T ]
 		return self.node == rhs.node
 	end
 
+	#Two positions are equals if they are both located on the same node.
 	redef fun ==( rhs ) do
 		if rhs isa RBTreePosition[ T ] then
 			return self.node == rhs.node
@@ -256,12 +250,11 @@ end
 #sets, multisets, maps and multimaps.
 #T is the element type of the tree. A is the access type of the tree. Namely, A stands for T in sets
 #but for the key in maps, whereas T stands for the pair.
-abstract class RBTree[ T, A ]
-	super SortedInsertable[ T ]
+private class RBTree[ T, A ]
 	#The tree root
-	private var root: nullable RBTreeNode[ T ]
+	protected var root: nullable RBTreeNode[ T ]
 	#The comparator object, accessible but not settable.
-	var comparator: Comparator[ A, A ]
+	protected var comp: Comparator[ A, A ]
 	
 	#-------------------------------
 	#Constructors.
@@ -270,22 +263,26 @@ abstract class RBTree[ T, A ]
 	#Creates a new red black tree with the equivalence comparator
 	init() do
 		self.root = null
-		self.comparator = new EquivalenceComparator[ A, A ]
+		self.comp = new EquivalenceComparator[ A, A ]
 	end
 	#Creats a new red black tree with the given comparator. Note that only the lower semantic is used
 	#for insertion but that the equivalence (equals) is also used when removing/retrieving (to identify
 	#the element).
 	init with_comparator( c: Comparator[ A, A ] ) do
-		self.comparator = c
+		self.comp = c
 	end	
 	
 	#-------------------------------
 	#Public interface.
 	#-------------------------------
 	
+	protected fun rb_comparator(): Comparator[ A, A ] do
+		return self.comp
+	end
+	
 	#Adds the element to the tree. Rebalancing might be triggered. If the element
 	#already exists, then it is placed as a right child of the rightmost duplicate.
-	redef fun insert( element: T ) do
+	protected fun rb_insert( element: T ) do
 		insert_new_node( element )
 	end
 	
@@ -294,7 +291,7 @@ abstract class RBTree[ T, A ]
 	#element according to its iteration semantic.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
-	fun remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
+	protected fun rb_remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
 		if not iter.is_ok then return iter
 		var n = iter.node
 		var r = find_replacement( n.as( not null ) )
@@ -315,18 +312,18 @@ abstract class RBTree[ T, A ]
 	#Removes all element from the tree and puts it in an empty state. Doing this
 	#invalidates all iterator and failure to acknowledge this is a gamble to enter
 	#the world of undefined behavior.
-	fun clear() do
+	protected fun rb_clear() do
 		self.root = null
 	end
 	
 	#Returns true if the tree is empty, false otherwise.
-	fun is_empty(): Bool do
+	protected fun rb_is_empty(): Bool do
 		return self.root == null
 	end
 	
 	#Returns the number of elements. O(n) (faster than with the iteration)
-	fun size(): Int do
-		if is_empty then return 0
+	protected fun rb_size(): Int do
+		if rb_is_empty then return 0
 		var count = 0
 		var nodes_to_visit = new List[ nullable RBTreeNode[ T ] ]
 		nodes_to_visit.push( self.root )
@@ -341,32 +338,41 @@ abstract class RBTree[ T, A ]
 	end
 	
 	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
-	fun has( e: A ): Bool do
+	protected fun rb_has( e: A ): Bool do
 		return find_node( e ) != null
 	end	
 	
 	#Returns an iterator on the first encountered occurrence of the
 	#element. The iterator might be invalid if no such element exists.
-	fun find( a: A ): RBTreeBiIterator[ T ] do
+	protected fun rb_find( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( find_node( a ) )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
 	#the previous in order. Returns an invalid iterator if no such element exists.
-	fun floor( a: A ): RBTreeBiIterator[ T ] do
+	protected fun rb_floor( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( floor_node( a ) )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
 	#the next in order. Returns an invalid iterator if no such element exists.
-	fun ceiling( a: A ): RBTreeBiIterator[ T ] do
+	protected fun rb_ceiling( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( ceiling_node( a ) )
+	end
+	#Returns an iterator on the lowest element.
+	protected fun rb_lowest(): RBTreeBiIterator[ T ] do
+		return new RBTreeBiIterator[ T ].inplace( lowest_node )
+	end
+	#Returns an iterator on the highest element. NOTE: 
+	#The returned iterator is not reversed.
+	protected fun rb_highest(): RBTreeBiIterator[ T ] do
+		return new RBTreeBiIterator[ T ].inplace( highest_node )
 	end
 	
 	#Returns an iterator that iterates in ascending order.
-	fun iterator(): RBTreeBiIterator[ T ] do
+	protected fun rb_iterator(): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( lowest_node )
 	end
 	#Returns an iterator that iterates in descending order.
-	fun reverse_iterator(): RBTreeRIterator[ T ] do
+	protected fun rb_reverse_iterator(): RBTreeRIterator[ T ] do
 		return new RBTreeRIterator[ T ].inplace( highest_node )
 	end
 	
@@ -376,12 +382,12 @@ abstract class RBTree[ T, A ]
 	
 	#Returns a position on the lowest element's node.
 	private fun lowest_node(): nullable RBTreeNode[ T ] do
-		if is_empty then return null
+		if rb_is_empty then return null
 		return self.root.deepest_left
 	end
 	#Return a position on the highest element's node.
 	private fun highest_node(): nullable RBTreeNode[ T ] do
-		if is_empty then return null
+		if rb_is_empty then return null
 		return self.root.deepest_right
 	end
 	
@@ -448,12 +454,12 @@ abstract class RBTree[ T, A ]
 		
 	#Returns true if the comparator returns 0.
 	private fun is_equivalent( lhs: A, rhs: A ): Bool do
-		return self.comparator.call( lhs, rhs ) == 0
+		return self.comp.call( lhs, rhs ) == 0
 	end	
 	
 	#Returns true if lhs < rhs, as provided by the comparator.
 	private fun is_lower( lhs: A, rhs: A ): Bool do
-		return self.comparator.call( lhs, rhs ) < 0
+		return self.comp.call( lhs, rhs ) < 0
 	end
 	
 	#Emplaces the node to the specified location. Nodes linking on the destination
@@ -814,20 +820,174 @@ end
 
 class TreeSet[ T ]
 	super RBTree[ T, T ]
+	super SortedInsertable[ T ]
+	type A: T
+	
 	init() do super end
+	init with_comparator( c ) do super end
+	
 	
 	#Inserts the element in the tree. If the element already exists, then
 	#it is replaced.
 	redef fun insert( e ) do
 		var n = find_node( e )
-		if n == null then super else n.element = e
+		if n == null then rb_insert( e ) else n.element = e
+	end		
+		
+	#TODO update doc when done - reimplement with the global iterators?!?!?!!?!?!?.
+	#Removes at the location indicated by the iterator. The iterator is moved to the next
+	#element according to its iteration semantic.
+	#NOTE: Results of removing on an already invalidated iterator are undefined.
+	#Removing on an invalid iterator does nothing.
+	fun remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
+		return rb_remove_at( iter )
+	end	
+	
+	#Removes all element from the tree and puts it in an empty state. Doing this
+	#invalidates all iterator and failure to acknowledge this is a gamble to enter
+	#the world of undefined behavior.
+	fun clear() do
+		rb_clear
+	end
+	
+	#Returns true if the tree is empty, false otherwise.
+	fun is_empty(): Bool do
+		return rb_is_empty
+	end
+	
+	#Returns the number of elements. O(n) (faster than with the iteration, which is O(n*lg(n)))
+	fun size(): Int do
+		return rb_size
+	end
+	
+	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
+	fun has( a: A ): Bool do
+		return rb_has( a )
+	end		
+	
+	#Returns an iterator on the first encountered occurrence of the
+	#element. The iterator might be invalid if no such element exists.
+	fun find( a: A ): RBTreeBiIterator[ T ] do
+		return rb_find( a )
+	end
+	#Returns an iterator on either the element or, if it does not exist,
+	#the previous in order. Returns an invalid iterator if no such element exists.
+	fun floor( a: A ): RBTreeBiIterator[ T ] do
+		return rb_floor( a )
+	end
+	#Returns an iterator on either the element or, if it does not exist,
+	#the next in order. Returns an invalid iterator if no such element exists.
+	fun ceiling( a: A ): RBTreeBiIterator[ T ] do
+		return rb_ceiling( a )
+	end
+	#Returns an iterator on the lowest element.
+	fun lowest(): RBTreeBiIterator[ T ] do
+		return rb_lowest
+	end
+	#Returns an iterator on the highest element. NOTE: 
+	#The returned iterator is not reversed.
+	fun highest(): RBTreeBiIterator[ T ] do
+		return rb_highest
+	end
+	
+	#Returns an iterator that iterates in ascending order.
+	fun iterator(): RBTreeBiIterator[ T ] do
+		return rb_iterator
+	end
+	#Returns an iterator that iterates in descending order.
+	fun reverse_iterator(): RBTreeRIterator[ T ] do
+		return rb_reverse_iterator
+	end
+	
+	#Returns the comparator object.
+	fun comparator(): Comparator[ A, A ] do
+		return self.comp
 	end		
 end
 
-class TreeMultiSet[ T ]
+class TreeMultiset[ T ]
 	super RBTree[ T, T ]
+	super SortedInsertable[ T ]
+	type A: T
+	
 	init() do super end
 	init with_comparator( c ) do super end
+	
+	#Inserts the element in the tree. If the element already exists, then
+	#it is replaced.
+	redef fun insert( e ) do
+		rb_insert( e )
+	end		
+		
+	#TODO update doc when done - reimplement with the global iterators?!?!?!!?!?!?.
+	#Removes at the location indicated by the iterator. The iterator is moved to the next
+	#element according to its iteration semantic.
+	#NOTE: Results of removing on an already invalidated iterator are undefined.
+	#Removing on an invalid iterator does nothing.
+	fun remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
+		return rb_remove_at( iter )
+	end	
+	
+	#Removes all element from the tree and puts it in an empty state. Doing this
+	#invalidates all iterator and failure to acknowledge this is a gamble to enter
+	#the world of undefined behavior.
+	fun clear() do
+		rb_clear
+	end
+	
+	#Returns true if the tree is empty, false otherwise.
+	fun is_empty(): Bool do
+		return rb_is_empty
+	end
+	
+	#Returns the number of elements. O(n) (faster than with the iteration, which is O(n*lg(n)))
+	fun size(): Int do
+		return rb_size
+	end
+	
+	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
+	fun has( a: A ): Bool do
+		return rb_has( a )
+	end	
+	
+	#Returns an iterator on the first encountered occurrence of the
+	#element. The iterator might be invalid if no such element exists.
+	fun find( a: A ): RBTreeBiIterator[ T ] do
+		return rb_find( a )
+	end
+	#Returns an iterator on either the element or, if it does not exist,
+	#the previous in order. Returns an invalid iterator if no such element exists.
+	fun floor( a: A ): RBTreeBiIterator[ T ] do
+		return rb_floor( a )
+	end
+	#Returns an iterator on either the element or, if it does not exist,
+	#the next in order. Returns an invalid iterator if no such element exists.
+	fun ceiling( a: A ): RBTreeBiIterator[ T ] do
+		return rb_ceiling( a )
+	end
+	#Returns an iterator on the lowest element.
+	fun lowest(): RBTreeBiIterator[ T ] do
+		return rb_lowest
+	end
+	#Returns an iterator on the highest element. NOTE: 
+	#The returned iterator is not reversed.
+	fun highest(): RBTreeBiIterator[ T ] do
+		return rb_highest
+	end
+	
+	#Returns an iterator that iterates in ascending order.
+	fun iterator(): RBTreeBiIterator[ T ] do
+		return rb_iterator
+	end
+	#Returns an iterator that iterates in descending order.
+	fun reverse_iterator(): RBTreeRIterator[ T ] do
+		return rb_reverse_iterator
+	end	
+	
+	#Returns the comparator object.
+	fun comparator(): Comparator[ A, A ] do
+		return self.comp
+	end		
 end
 
 class MapEntry[ K, V ]
@@ -845,6 +1005,11 @@ end
 
 class TreeMap[ K, V ]
 	super RBTree[ MapEntry[ K, V ], K ]
+	super SortedInsertable[ MapEntry[ K, V ] ]
+	
+	type T: MapEntry[ K, V ]
+	type A: K
+	
 	init() do super end
 	init with_comparator( c ) do super end
 	
@@ -852,7 +1017,77 @@ class TreeMap[ K, V ]
 	#it is replaced.
 	redef fun insert( e ) do
 		var n = find_node( e.key )
-		if n == null then super else n.element = e
+		if n == null then rb_insert( e ) else n.element = e
+	end	
+		
+	#TODO update doc when done - reimplement with the global iterators?!?!?!!?!?!?.
+	#Removes at the location indicated by the iterator. The iterator is moved to the next
+	#element according to its iteration semantic.
+	#NOTE: Results of removing on an already invalidated iterator are undefined.
+	#Removing on an invalid iterator does nothing.
+	fun remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
+		return rb_remove_at( iter )
+	end	
+	
+	#Removes all element from the tree and puts it in an empty state. Doing this
+	#invalidates all iterator and failure to acknowledge this is a gamble to enter
+	#the world of undefined behavior.
+	fun clear() do
+		rb_clear
+	end
+	
+	#Returns true if the tree is empty, false otherwise.
+	fun is_empty(): Bool do
+		return rb_is_empty
+	end
+	
+	#Returns the number of elements. O(n) (faster than with the iteration, which is O(n*lg(n)))
+	fun size(): Int do
+		return rb_size
+	end
+	
+	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
+	fun has( a: A ): Bool do
+		return rb_has( a )
+	end	
+	
+	#Returns an iterator on the first encountered occurrence of the
+	#element. The iterator might be invalid if no such element exists.
+	fun find( a: A ): RBTreeBiIterator[ T ] do
+		return rb_find( a )
+	end
+	#Returns an iterator on either the element or, if it does not exist,
+	#the previous in order. Returns an invalid iterator if no such element exists.
+	fun floor( a: A ): RBTreeBiIterator[ T ] do
+		return rb_floor( a )
+	end
+	#Returns an iterator on either the element or, if it does not exist,
+	#the next in order. Returns an invalid iterator if no such element exists.
+	fun ceiling( a: A ): RBTreeBiIterator[ T ] do
+		return rb_ceiling( a )
+	end
+	#Returns an iterator on the lowest element.
+	fun lowest(): RBTreeBiIterator[ T ] do
+		return rb_lowest
+	end
+	#Returns an iterator on the highest element. NOTE: 
+	#The returned iterator is not reversed.
+	fun highest(): RBTreeBiIterator[ T ] do
+		return rb_highest
+	end
+	
+	#Returns an iterator that iterates in ascending order.
+	fun iterator(): RBTreeBiIterator[ T ] do
+		return rb_iterator
+	end
+	#Returns an iterator that iterates in descending order.
+	fun reverse_iterator(): RBTreeRIterator[ T ] do
+		return rb_reverse_iterator
+	end	
+	
+	#Returns the comparator object.
+	fun comparator(): Comparator[ A, A ] do
+		return self.comp
 	end	
 	
 	redef fun access_key( n ) do
@@ -860,16 +1095,110 @@ class TreeMap[ K, V ]
 	end
 end
 
-class TreeMultiMap[ K, V ]
-	super RBTree[ MapEntry[ K, V], K ]
+class TreeMultimap[ K, V ]
+	super RBTree[ MapEntry[ K, V ], K ]
+	super SortedInsertable[ MapEntry[ K, V ] ]
+	
+	type T: MapEntry[ K, V ]
+	type A: K	
 	
 	init() do super end
 	init with_comparator( c) do super end
+	
+	#Inserts the element in the tree. If the element already exists, then
+	#it is replaced.
+	redef fun insert( e ) do
+		rb_insert( e )
+	end		
+		
+	#TODO update doc when done - reimplement with the global iterators?!?!?!!?!?!?.
+	#Removes at the location indicated by the iterator. The iterator is moved to the next
+	#element according to its iteration semantic.
+	#NOTE: Results of removing on an already invalidated iterator are undefined.
+	#Removing on an invalid iterator does nothing.
+	fun remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
+		return rb_remove_at( iter )
+	end	
+	
+	#Removes all element from the tree and puts it in an empty state. Doing this
+	#invalidates all iterator and failure to acknowledge this is a gamble to enter
+	#the world of undefined behavior.
+	fun clear() do
+		rb_clear
+	end
+	
+	#Returns true if the tree is empty, false otherwise.
+	fun is_empty(): Bool do
+		return rb_is_empty
+	end
+	
+	#Returns the number of elements. O(n) (faster than with the iteration, which is O(n*lg(n)))
+	fun size(): Int do
+		return rb_size
+	end
+	
+	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
+	fun has( a: A ): Bool do
+		return rb_has( a )
+	end	
+	
+	#Returns an iterator on the first encountered occurrence of the
+	#element. The iterator might be invalid if no such element exists.
+	fun find( a: A ): RBTreeBiIterator[ T ] do
+		return rb_find( a )
+	end
+	#Returns an iterator on either the element or, if it does not exist,
+	#the previous in order. Returns an invalid iterator if no such element exists.
+	fun floor( a: A ): RBTreeBiIterator[ T ] do
+		return rb_floor( a )
+	end
+	#Returns an iterator on either the element or, if it does not exist,
+	#the next in order. Returns an invalid iterator if no such element exists.
+	fun ceiling( a: A ): RBTreeBiIterator[ T ] do
+		return rb_ceiling( a )
+	end
+	#Returns an iterator on the lowest element.
+	fun lowest(): RBTreeBiIterator[ T ] do
+		return rb_lowest
+	end
+	#Returns an iterator on the highest element. NOTE: 
+	#The returned iterator is not reversed.
+	fun highest(): RBTreeBiIterator[ T ] do
+		return rb_highest
+	end
+	
+	#Returns an iterator that iterates in ascending order.
+	fun iterator(): RBTreeBiIterator[ T ] do
+		return rb_iterator
+	end
+	#Returns an iterator that iterates in descending order.
+	fun reverse_iterator(): RBTreeRIterator[ T ] do
+		return rb_reverse_iterator
+	end	
+	
+	#Returns the comparator object.
+	fun comparator(): Comparator[ A, A ] do
+		return self.comp
+	end	
 	
 	redef fun access_key( n ) do
 		return n.element.key
 	end
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #This class exists for debug purposes. It tests that its associated
 #tree respects every constraint of a red black tree. Those are the constraints
@@ -884,12 +1213,21 @@ end
 class RBTreeValidator
 	private var tree: RBTree[ Object, Object ]
 	#Constructs a validator for the given tree.
-	init ( t: RBTree[ Object, Object ] ) do
+	init set( t: TreeSet[ Object ] ) do
+		self.tree = t
+	end
+	init multiset( t: TreeMultiset[ Object ] ) do
+		self.tree = t
+	end
+	init map( t: TreeMap[ Object, Object ] ) do
+		self.tree = t
+	end
+	init multimap( t: TreeMultimap[ Object, Object ] ) do
 		self.tree = t
 	end
 	#Launches the validation. It stops at the first error encountered.
 	fun validate(): Result do
-		if self.tree.is_empty then return new Result.valid()
+		if self.tree.rb_is_empty then return new Result.valid()
 		var res = check_root
 		if not res.is_valid then return res
 		res = check_red_nodes_children
@@ -905,7 +1243,7 @@ class RBTreeValidator
 	
 	#Returns a string view of the tree, for debugging purposes mainly.
 	fun tree_string(): String do
-		if self.tree.is_empty then 
+		if self.tree.rb_is_empty then 
 			return "empty tree"
 		end
 		var res = ""
@@ -995,12 +1333,6 @@ class RBTreeValidator
 	#This is method assures that the tree is balanced by enforcing its main rule: the longest
 	#path to a leaf is never above twice the shorted path to a leaf.
 	private fun check_balance(): Result do
-		var count = 0
-		var iter = self.tree.iterator
-		while iter.is_ok do 
-			count +=1
-			iter.next
-		end
 		var max_depth = max_node_depth( self.tree.root.as( not null ) )
 		var min_depth = min_node_depth( self.tree.root.as( not null ) )
 		
@@ -1033,7 +1365,7 @@ class RBTreeValidator
 	#Enforces the binary search tree semantics: elements on the left are lower (or equivalent)
 	#and elements on the right are higher (or equivalent)
 	private fun check_binary_semantic(): Result do
-		if self.tree.is_empty then return new Result.valid
+		if self.tree.rb_is_empty then return new Result.valid
 		var nodes_to_visit = new List[ RBTreeNode[ Object ] ]
 		var n = self.tree.root.as( not null )
 		nodes_to_visit.push( n )

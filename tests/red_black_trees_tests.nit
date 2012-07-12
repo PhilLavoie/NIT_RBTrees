@@ -517,7 +517,7 @@ class TreeSetTests
 
 	init () do
 		self.tree = new TreeSet[ Element ]
-		self.validator = new RBTreeValidator( self.tree )
+		self.validator = new RBTreeValidator.set( self.tree )
 	end
 	redef fun test_all() do
 		print "\nTesting set"
@@ -573,17 +573,17 @@ class TreeSetTests
 	end
 end
 
-class TreeMultiSetTests 
+class TreeMultisetTests 
 	super MultiValuedTests
 	
 	redef type Element: Int
 	redef type Key: Int
-	private var tree: TreeMultiSet[ Element ]
+	private var tree: TreeMultiset[ Element ]
 	private var validator: RBTreeValidator
 	
 	init () do
-		self.tree = new TreeMultiSet[ Element ]
-		self.validator = new RBTreeValidator( self.tree )
+		self.tree = new TreeMultiset[ Element ]
+		self.validator = new RBTreeValidator.multiset( self.tree )
 	end
 	redef fun test_all() do
 		print "\nTesting multiset"
@@ -658,7 +658,7 @@ class TreeMapTests
 
 	init () do
 		self.tree = new TreeMap[ Int, String ]
-		self.validator = new RBTreeValidator( self.tree )
+		self.validator = new RBTreeValidator.map( self.tree )
 	end
 	
 	redef fun test_all() do
@@ -715,17 +715,17 @@ class TreeMapTests
 	end
 end
 
-class TreeMultiMapTests 
+class TreeMultimapTests 
 	super MultiValuedTests
 	
 	redef type Element: MapEntry[ Int, String ]
 	redef type Key: Int
-	private var tree: TreeMultiMap[ Int, String ]
+	private var tree: TreeMultimap[ Int, String ]
 	private var validator: RBTreeValidator
 	
 	init () do
-		self.tree = new TreeMultiMap[ Int, String ]
-		self.validator = new RBTreeValidator( self.tree )
+		self.tree = new TreeMultimap[ Int, String ]
+		self.validator = new RBTreeValidator.multimap( self.tree )
 	end
 	redef fun test_all() do
 		print "\nTesting multimap"
@@ -792,11 +792,11 @@ end
 
 
 
-var mset_tests = new TreeMultiSetTests()
+var mset_tests = new TreeMultisetTests()
 mset_tests.test_all
 var set_tests = new TreeSetTests()
 set_tests.test_all
 var map_tests = new TreeMapTests()
 map_tests.test_all
-var mmap_tests = new TreeMultiMapTests()
+var mmap_tests = new TreeMultimapTests()
 mmap_tests.test_all
