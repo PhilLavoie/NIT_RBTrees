@@ -150,9 +150,14 @@ class RBTreePosition[ T ]
 	end
 end
 
+abstract class RBTreeIterator[ T ]
+	super RBTreePosition[ T ]
+	super Iterator[ T ]
+end
+
 #Bidirectional iterator.
 class RBTreeBiIterator[ T ]
-	super RBTreePosition[ T ]
+	super RBTreeIterator[ T ]
 	super BidirectionalIterator[ T ]
 	#Creates an iterator that start on the specified node.
 	private init inplace( node: nullable RBTreeNode[ T ] ) do
@@ -201,7 +206,7 @@ end
 
 #Reverse view of the iterator.
 class RBTreeRIterator[ T ] 
-	super RBTreePosition[ T ]
+	super RBTreeIterator[ T ]
 	super BidirectionalIterator[ T ]
 	#Creates an iterator that start on the specified node.
 	private init inplace( node: nullable RBTreeNode[ T ] ) do
@@ -291,7 +296,7 @@ private class RBTree[ T, A ]
 	#element according to its iteration semantic.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
-	protected fun rb_remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
+	protected fun rb_remove_at( iter: RBTreeIterator[ T ] ): RBTreeIterator[ T ] do
 		if not iter.is_ok then return iter
 		var n = iter.node
 		var r = find_replacement( n.as( not null ) )
@@ -839,7 +844,7 @@ class TreeSet[ T ]
 	#element according to its iteration semantic.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
-	fun remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
+	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
 		return rb_remove_at( iter )
 	end	
 	
@@ -924,7 +929,7 @@ class TreeMultiset[ T ]
 	#element according to its iteration semantic.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
-	fun remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
+	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
 		return rb_remove_at( iter )
 	end	
 	
@@ -1025,7 +1030,7 @@ class TreeMap[ K, V ]
 	#element according to its iteration semantic.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
-	fun remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
+	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
 		return rb_remove_at( iter )
 	end	
 	
@@ -1116,7 +1121,7 @@ class TreeMultimap[ K, V ]
 	#element according to its iteration semantic.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
-	fun remove_at( iter: RBTreeBiIterator[ T ]): RBTreeBiIterator[ T ] do
+	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
 		return rb_remove_at( iter )
 	end	
 	
