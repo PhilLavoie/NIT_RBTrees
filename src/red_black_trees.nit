@@ -4,8 +4,8 @@ import iterators
 import functions
 import algos
 
-#Class of red black tree nodes. Basically, in addition to usual
-#tree pointers the node holds a color, which is either red or black.
+#Class of red black tree nodes. 
+#Basically, in addition to usual tree pointers the node holds a color, which is either red or black.
 #Since a red black tree is binary, each node has a pointer to its left
 #and right child. Sometimes, the algorithms require we extract information
 #requiring the parent of a node, therefore a parent pointer is also
@@ -123,7 +123,7 @@ end
 #Class representing a position on the tree. Mainly a class that is a level
 #higher than the iterators. Positions are meant to be created by this module's
 #classes only.
-class RBTreePosition[ T ] 
+private class RBTreePosition[ T ] 
 	type Compared: RBTreePosition[ T ]
 	#The tree node.
 	private var node: nullable RBTreeNode[ T ]
@@ -151,12 +151,14 @@ class RBTreePosition[ T ]
 	end
 end
 
+#Superclass of all iterators on red black trees.
 abstract class RBTreeIterator[ T ]
 	super RBTreePosition[ T ]
 	super Iterator[ T ]
 end
 
-#Bidirectional iterator.
+#Ascending order bidirectional iterator.
+#When reversed, it becomes a descending order bidirectional iterator.
 class RBTreeBiIterator[ T ]
 	super RBTreeIterator[ T ]
 	super BidirectionalIterator[ T ]
@@ -164,6 +166,7 @@ class RBTreeBiIterator[ T ]
 	private init inplace( node: nullable RBTreeNode[ T ] ) do
 		self.node = node
 	end
+	#Moves towards the next element in ascending order.
 	redef fun next() do
 		if self.node.is_right and not self.node.has_right then
 			while self.node.is_right do
@@ -176,7 +179,7 @@ class RBTreeBiIterator[ T ]
 			node = node.parent
 		end
 	end
-	#Moves towards the previous element in order.
+	#Moves towards the previous element in ascending order.
 	redef fun previous() do
 		if self.node.is_left and not self.node.has_left then
 			while self.node.is_left do
@@ -205,7 +208,7 @@ class RBTreeBiIterator[ T ]
 	end
 end
 
-#Reverse view of the iterator.
+#Descending order bidirectional iterator.
 class RBTreeRIterator[ T ] 
 	super RBTreeIterator[ T ]
 	super BidirectionalIterator[ T ]
@@ -213,6 +216,7 @@ class RBTreeRIterator[ T ]
 	private init inplace( node: nullable RBTreeNode[ T ] ) do
 		self.node = node
 	end
+	#Moves towards the next element in descending order.
 	redef fun next() do
 		if self.node.is_left and not self.node.has_left then
 			while self.node.is_left do
@@ -225,6 +229,7 @@ class RBTreeRIterator[ T ]
 			node = node.parent
 		end
 	end	
+	#Moves towards the previous element in descending order.
 	redef fun previous() do
 		if self.node.is_right and not self.node.has_right then
 			while self.node.is_right do
@@ -258,9 +263,9 @@ end
 #but for the key in maps, whereas T stands for the pair.
 private class RBTree[ T, A ]
 	#The tree root
-	protected var root: nullable RBTreeNode[ T ]
+	private var root: nullable RBTreeNode[ T ]
 	#The comparator object, accessible but not settable.
-	protected var comp: Comparator[ A, A ]
+	private var comp: Comparator[ A, A ]
 	
 	#-------------------------------
 	#Constructors.
@@ -279,25 +284,25 @@ private class RBTree[ T, A ]
 	end	
 	
 	#-------------------------------
-	#Public interface.
+	#High level interface
 	#-------------------------------
 	
-	protected fun rb_comparator(): Comparator[ A, A ] do
+	#Returns the comparator object.
+	private fun rb_comparator(): Comparator[ A, A ] do
 		return self.comp
 	end
 	
 	#Adds the element to the tree. Rebalancing might be triggered. If the element
 	#already exists, then it is placed as a right child of the rightmost duplicate.
-	protected fun rb_insert( element: T ) do
+	private fun rb_insert( element: T ) do
 		insert_new_node( element )
 	end
 	
-	#TODO update doc when done.
 	#Removes at the location indicated by the iterator. The iterator is moved to the next
-	#element according to its iteration semantic.
+	#element according to its iteration semantic. The provided iterator is returned.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
-	protected fun rb_remove_at( iter: RBTreeIterator[ T ] ): RBTreeIterator[ T ] do
+	private fun rb_remove_at( iter: RBTreeIterator[ T ] ): RBTreeIterator[ T ] do
 		if not iter.is_ok then return iter
 		var n = iter.node
 		var r = find_replacement( n.as( not null ) )
@@ -318,17 +323,17 @@ private class RBTree[ T, A ]
 	#Removes all element from the tree and puts it in an empty state. Doing this
 	#invalidates all iterator and failure to acknowledge this is a gamble to enter
 	#the world of undefined behavior.
-	protected fun rb_clear() do
+	private fun rb_clear() do
 		self.root = null
 	end
 	
 	#Returns true if the tree is empty, false otherwise.
-	protected fun rb_is_empty(): Bool do
+	private fun rb_is_empty(): Bool do
 		return self.root == null
 	end
 	
 	#Returns the number of elements.
-	protected fun rb_length(): Int do
+	private fun rb_length(): Int do
 		if rb_is_empty then return 0
 		var count = 0
 		var nodes_to_visit = new List[ nullable RBTreeNode[ T ] ]
@@ -344,41 +349,41 @@ private class RBTree[ T, A ]
 	end
 	
 	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
-	protected fun rb_has( e: A ): Bool do
+	private fun rb_has( e: A ): Bool do
 		return find_node( e ) != null
 	end	
 	
 	#Returns an iterator on the first encountered occurrence of the
 	#element. The iterator might be invalid if no such element exists.
-	protected fun rb_find( a: A ): RBTreeBiIterator[ T ] do
+	private fun rb_find( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( find_node( a ) )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
 	#the previous in order. Returns an invalid iterator if no such element exists.
-	protected fun rb_floor( a: A ): RBTreeBiIterator[ T ] do
+	private fun rb_floor( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( floor_node( a ) )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
 	#the next in order. Returns an invalid iterator if no such element exists.
-	protected fun rb_ceiling( a: A ): RBTreeBiIterator[ T ] do
+	private fun rb_ceiling( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( ceiling_node( a ) )
 	end
 	#Returns an iterator on the lowest element.
-	protected fun rb_lowest(): RBTreeBiIterator[ T ] do
+	private fun rb_lowest(): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( lowest_node )
 	end
 	#Returns an iterator on the highest element. NOTE: 
 	#The returned iterator is not reversed.
-	protected fun rb_highest(): RBTreeBiIterator[ T ] do
+	private fun rb_highest(): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( highest_node )
 	end
 	
 	#Returns an iterator that iterates in ascending order.
-	protected fun rb_iterator(): RBTreeBiIterator[ T ] do
+	private fun rb_iterator(): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( lowest_node )
 	end
 	#Returns an iterator that iterates in descending order.
-	protected fun rb_reverse_iterator(): RBTreeRIterator[ T ] do
+	private fun rb_reverse_iterator(): RBTreeRIterator[ T ] do
 		return new RBTreeRIterator[ T ].inplace( highest_node )
 	end
 	
@@ -454,9 +459,7 @@ private class RBTree[ T, A ]
 	#IMPORTANT: This method is to be redefined by the inheriting classes. It
 	#extracts the access key part of the node (the element on which the
 	#comparison is made).
-	private fun access_key( n: RBTreeNode[ T ] ): A do
-		return n.element
-	end	
+	private fun access_key( n: RBTreeNode[ T ] ): A is abstract
 		
 	#Returns true if the comparator returns 0.
 	private fun is_equivalent( lhs: A, rhs: A ): Bool do
@@ -503,12 +506,10 @@ private class RBTree[ T, A ]
 		return n
 	end
 	
-	#TODO remove the nullable part, since there is no point in rotating on a null node.
-	
 	#Rotates left across the provided node. The node becomes the left successor
 	#of its right child and inherits its left subtree as its own right
 	#subtree, guaranteeing that no rules are violated.
-	private fun rotate_left( top: nullable RBTreeNode[ T ] ) do
+	private fun rotate_left( top: RBTreeNode[ T ] ) do
 		var new_top = top.right
 		#Move the new top's left sub tree to the previous
 		#top right's subtree.
@@ -533,7 +534,7 @@ private class RBTree[ T, A ]
 	#Rotates right across the provided node. The node becomes the right successor
 	#of its left child and inherits its right subtree as its own left
 	#subtree, guaranteeing that no rules are violated.
-	private fun rotate_right( top: nullable RBTreeNode[ T ] ) do
+	private fun rotate_right( top: RBTreeNode[ T ] ) do
 		var new_top = top.left
 		#Move the new top's right sub tree to the previous
 		#top left's subtree.
@@ -606,7 +607,8 @@ private class RBTree[ T, A ]
 		return n.left.deepest_right
 	end		
 	
-	#assumption: n is black and therefore n has a sibling (non root case)
+	#Launches the rebalance algorithm on the node.
+	#This node is assumed to be black and therefore has a sibling (when it is not the root)
 	private fun delete_rebalance( n: RBTreeNode[ T ] ) do
 		assert n.is_black
 		if self.root == n then 
@@ -753,7 +755,9 @@ private class RBTree[ T, A ]
 	end
 	
 	
-	#To be called on the newly created node for the new inserted element.
+	#To be called on the newly created node for the new inserted element. Launches
+	#the rebalancing algorithm.
+	#Assumes that the node is red.
 	private fun insert_rebalance( n: RBTreeNode[ T ] ) do
 		assert n.is_red
 		#If we just inserted the root, then the it only need to be painted
@@ -780,14 +784,20 @@ private class RBTree[ T, A ]
 		insert_rebalance_red_uncle( n )
 	end
 	
+	#When inserting the root, nothing but painting the node
+	#black has to be done.
 	private fun insert_rebalance_root( n: RBTreeNode[ T ] ) do
 		n.paint_black
 	end
 	
+	#Inserting a red node under a black node does nothing.
 	private fun insert_rebalance_black_parent( n: RBTreeNode[ T ] ) do
 		#Do nothing.
 	end
-	#Assumes that the parent is red.
+	
+	#This algorithm is a special case of inserting under a red node.
+	#It treats the case where the uncle node is black.
+	#Assumes that the parent is red and the uncle is black.
 	private fun insert_rebalance_black_uncle( n: RBTreeNode[ T ] ) do
 		var p = n.parent.as( not null )
 		#The uncle is black and the parent is red.
@@ -811,7 +821,9 @@ private class RBTree[ T, A ]
 			rotate_left( gp )
 		end
 	end
-	#Assumes the parent is red.
+	
+	#Second case of insertion under a red node.
+	#Assumes that both the parent and the uncle are blacks.
 	private fun insert_rebalance_red_uncle( n: RBTreeNode[ T ] ) do
 		#If both the uncle and the parent is red, then we only need
 		#to paint them both black, adding a black node to the path.
@@ -824,17 +836,17 @@ private class RBTree[ T, A ]
 	end
 end
 
-#A collection holding its elements in a sorted order. This particular prevents 
-#the existance of duplicates within it. It is implemented using a red black tree.
-#Therefore, insertion, deletion, access are all operations done in logarithmic
-#time (of the cardinality of the tree). Ascending/descending iteration is done
-#in O(nlg(n)).
+#Set collection preventing duplicate elements and implemented using a red black tree.
 class TreeSet[ T ]
 	super RBTree[ T, T ]
 	super SortedInsertable[ T ]
-	type A: T
 	
+	#Access type.
+	type A: T	
+	
+	#Creates an empty set with the equivalence comparator.
 	init() do super end
+	#Creates an empty set based on the provided comparator.
 	init with_comparator( c ) do super end
 		
 	#Inserts the element in the tree. If the element already exists, then
@@ -844,9 +856,8 @@ class TreeSet[ T ]
 		if n == null then rb_insert( e ) else n.element = e
 	end		
 		
-	#TODO update doc when done - reimplement with the global iterators?!?!?!!?!?!?.
 	#Removes at the location indicated by the iterator. The iterator is moved to the next
-	#element according to its iteration semantic.
+	#element according to its iteration semantic. The provided iterator is returned.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
 	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
@@ -913,14 +924,24 @@ class TreeSet[ T ]
 	fun comparator(): Comparator[ A, A ] do
 		return self.comp
 	end		
+	
+	#Returns the node element.
+	redef fun access_key( n ) do
+		return n.element
+	end	
 end
 
+#Set collection allowing duplicate elements and implemented using a red black tree.
 class TreeMultiset[ T ]
 	super RBTree[ T, T ]
 	super SortedInsertable[ T ]
-	type A: T
 	
+	#Access type.
+	type A: T	
+	
+	#Creates an empty multiset with the equivalence comparator.
 	init() do super end
+	#Creates an empty multiset based on the provided comparator.
 	init with_comparator( c ) do super end
 	
 	#Inserts the element in the tree. If the element already exists, then
@@ -929,9 +950,8 @@ class TreeMultiset[ T ]
 		rb_insert( e )
 	end		
 		
-	#TODO update doc when done - reimplement with the global iterators?!?!?!!?!?!?.
 	#Removes at the location indicated by the iterator. The iterator is moved to the next
-	#element according to its iteration semantic.
+	#element according to its iteration semantic. The provided iterator is returned.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
 	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
@@ -1006,29 +1026,47 @@ class TreeMultiset[ T ]
 		end		
 		return count
 	end
+	
+	#Returns the node element.
+	redef fun access_key( n ) do
+		return n.element
+	end
 end
 
+#Map element type.
+#It is nothing but a glorified pair made of a key and a value.
+#It was designed to be an immutable type.
 class MapEntry[ K, V ]
 	var key: K
 	var value: V
+	#Constructs a new map entry with the given key and value.
 	init ( k: K, v: V ) do
 		self.key = k
 		self.value = v
 	end	
 	
+	#Returns a string depicting the content of the entry.
 	redef fun to_s() do
 		return "( key: {key}, value: {value} )"
 	end
 end
 
+#Map collection preventing duplicate keys and implemented using a red black tree.
+#Its element type is MapEntry[ K, V ] and its access type is K.
 class TreeMap[ K, V ]
 	super RBTree[ MapEntry[ K, V ], K ]
 	super SortedInsertable[ MapEntry[ K, V ] ]
 	
+	#Element type.
 	type T: MapEntry[ K, V ]
-	type A: K
+	#Access type.
+	type A: K	
 	
+	#Creates an empty map with the equivalence comparator.
 	init() do super end
+	#Creates an empty map based on the provided comparator.
+	#The comparator is only used for key comparisons, therefore
+	#it compares keys only.
 	init with_comparator( c ) do super end
 	
 	#Inserts the element in the tree. If the element already exists, then
@@ -1038,9 +1076,8 @@ class TreeMap[ K, V ]
 		if n == null then rb_insert( e ) else n.element = e
 	end	
 		
-	#TODO update doc when done - reimplement with the global iterators?!?!?!!?!?!?.
 	#Removes at the location indicated by the iterator. The iterator is moved to the next
-	#element according to its iteration semantic.
+	#element according to its iteration semantic. The provided iterator is returned.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
 	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
@@ -1108,20 +1145,29 @@ class TreeMap[ K, V ]
 		return self.comp
 	end	
 	
+	#The key need to be extracted from the node for the comparison to take place.
 	redef fun access_key( n ) do
 		return n.element.key
 	end
 end
 
+#Map collection allowing duplicate keys and implemented using a red black tree.
+#Its element type is MapEntry[ K, V ] and its access type is K.
 class TreeMultimap[ K, V ]
 	super RBTree[ MapEntry[ K, V ], K ]
 	super SortedInsertable[ MapEntry[ K, V ] ]
 	
+	#Element type.
 	type T: MapEntry[ K, V ]
+	#Access type.
 	type A: K	
 	
+	#Creates an empty multimap with the equivalence comparator.
 	init() do super end
-	init with_comparator( c) do super end
+	#Creates an empty multimap based on the provided comparator.
+	#The comparator is only used for key comparisons, therefore
+	#it compares keys only.
+	init with_comparator( c ) do super end
 	
 	#Inserts the element in the tree. If the element already exists, then
 	#it is replaced.
@@ -1129,9 +1175,8 @@ class TreeMultimap[ K, V ]
 		rb_insert( e )
 	end		
 		
-	#TODO update doc when done - reimplement with the global iterators?!?!?!!?!?!?.
 	#Removes at the location indicated by the iterator. The iterator is moved to the next
-	#element according to its iteration semantic.
+	#element according to its iteration semantic. The provided iterator is returned.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
 	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
@@ -1210,6 +1255,7 @@ class TreeMultimap[ K, V ]
 		return count
 	end	
 	
+	#The key need to be extracted from the node for the comparison to take place.
 	redef fun access_key( n ) do
 		return n.element.key
 	end
@@ -1218,7 +1264,8 @@ end
 
 
 
-#This class exists for debug purposes. It tests that its associated
+#This class exists for debug purposes only. 
+#It tests that its associated
 #tree respects every constraint of a red black tree. Those are the constraints
 #that are checked:
 #	-The root must be black
@@ -1233,19 +1280,23 @@ end
 #	 has to be tested elsewhere.
 class RBTreeValidator
 	private var tree: RBTree[ Object, Object ]
-	#Constructs a validator for the given tree.
+	#Constructs a validator for a set.
 	init set( t: TreeSet[ Object ] ) do
 		self.tree = t
 	end
+	#Constructs a validator for a multiset.
 	init multiset( t: TreeMultiset[ Object ] ) do
 		self.tree = t
 	end
+	#Constructs a validator for a map.
 	init map( t: TreeMap[ Object, Object ] ) do
 		self.tree = t
 	end
+	#Constructs a validator for a multimap.
 	init multimap( t: TreeMultimap[ Object, Object ] ) do
 		self.tree = t
 	end
+	
 	#Launches the validation. It stops at the first error encountered.
 	fun validate(): Result do
 		if self.tree.rb_is_empty then return new Result.valid()
@@ -1302,10 +1353,12 @@ class RBTreeValidator
 		end
 		return new Result.valid()
 	end
+	
 	#Checks that no red node has a red child.
 	private fun check_red_nodes_children(): Result do
 		return check_red_node_children( self.tree.root.as( not null ) )
 	end
+	
 	#Recursively checks for the red node children rule.
 	private fun check_red_node_children( n: RBTreeNode[ Object ] ): Result do
 		if n.is_red then
@@ -1325,12 +1378,14 @@ class RBTreeValidator
 		end
 		return new Result.valid()
 	end
+	
 	#Checks that every simple path from a node to its leaf has the same amount of black
 	#nodes.
 	private fun check_black_nodes_count(): Result do
 		var res = check_node_count( self.tree.root.as( not null ) )
 		if res.is_valid then return new Result.valid else return new Result.invalid( res.message )
 	end
+	
 	#Recursively checks for the black node paths rule. 
 	private fun check_node_count( n: RBTreeNode[ Object ] ): ValuedResult[ Int ] do
 		var left_count = 0
@@ -1362,6 +1417,7 @@ class RBTreeValidator
 		end
 		return new Result.valid()
 	end
+	
 	#Returns longest path to a leaf's length
 	private fun max_node_depth( n: RBTreeNode[ Object ] ): Int do
 		var max_depth = 1
@@ -1372,6 +1428,7 @@ class RBTreeValidator
 		if left_max_depth < right_max_depth then max_depth += right_max_depth else max_depth += left_max_depth
 		return max_depth
 	end
+	
 	#Returns shortest path to a leaf's length
 	private fun min_node_depth( n: RBTreeNode[ Object ] ): Int do
 		var min_depth = 1
@@ -1399,6 +1456,7 @@ class RBTreeValidator
 		end		
 		return new Result.valid
 	end
+	
 	#Recursively enforces the binary semantic.
 	private fun check_node_binary_semantic( n: RBTreeNode[ Object ] ): Result do
 		if n.has_left and 

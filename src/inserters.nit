@@ -1,19 +1,27 @@
+#Insert inteface.
 interface Inserter[ T ]
 	fun insert( e: T ) is abstract
 end
 
+#An interface for sorted collection that provide
+#an insert method.
 interface SortedInsertable[ T ]
 	fun insert( e: T ) is abstract
 end
 
+#An interface for collection allowing insertions
+#at the back.
 interface BackInsertable[ T ]
 	fun push( e: T ) is abstract
 end
 
+#An interface for collection allowing insertions
+#at the front.
 interface FrontInsertable[ T ]
 	fun unshift( e: T ) is abstract
 end
 
+#Inserter object made for insertion on sorted collections.
 class SortedInserter[ T ]
 	super Inserter[ T ]
 
@@ -26,6 +34,8 @@ class SortedInserter[ T ]
 	end
 end
 
+#Inserter object made for back insertions on collections
+#that support this operation.
 class BackInserter[ T ]
 	super Inserter[ T ]
 
@@ -38,6 +48,8 @@ class BackInserter[ T ]
 	end
 end
 
+#Inserter object made for front insertions on collections
+#that support this operation.
 class FrontInserter[ T ]
 	super Inserter[ T ]
 
