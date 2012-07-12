@@ -321,8 +321,8 @@ private class RBTree[ T, A ]
 		return self.root == null
 	end
 	
-	#Returns the number of elements. O(n) (faster than with the iteration)
-	protected fun rb_size(): Int do
+	#Returns the number of elements.
+	protected fun rb_length(): Int do
 		if rb_is_empty then return 0
 		var count = 0
 		var nodes_to_visit = new List[ nullable RBTreeNode[ T ] ]
@@ -855,9 +855,9 @@ class TreeSet[ T ]
 		return rb_is_empty
 	end
 	
-	#Returns the number of elements. O(n) (faster than with the iteration, which is O(n*lg(n)))
-	fun size(): Int do
-		return rb_size
+	#Returns the number of elements.
+	fun length(): Int do
+		return rb_length
 	end
 	
 	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
@@ -940,9 +940,9 @@ class TreeMultiset[ T ]
 		return rb_is_empty
 	end
 	
-	#Returns the number of elements. O(n) (faster than with the iteration, which is O(n*lg(n)))
-	fun size(): Int do
-		return rb_size
+	#Returns the number of elements.
+	fun length(): Int do
+		return rb_length
 	end
 	
 	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
@@ -1041,9 +1041,9 @@ class TreeMap[ K, V ]
 		return rb_is_empty
 	end
 	
-	#Returns the number of elements. O(n) (faster than with the iteration, which is O(n*lg(n)))
-	fun size(): Int do
-		return rb_size
+	#Returns the number of elements.
+	fun length(): Int do
+		return rb_length
 	end
 	
 	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
@@ -1132,9 +1132,9 @@ class TreeMultimap[ K, V ]
 		return rb_is_empty
 	end
 	
-	#Returns the number of elements. O(n) (faster than with the iteration, which is O(n*lg(n)))
-	fun size(): Int do
-		return rb_size
+	#Returns the number of elements.
+	fun length(): Int do
+		return rb_length
 	end
 	
 	#Returns true if the tree holds at least one occurrence of the given element, false otherwise.
@@ -1189,17 +1189,6 @@ end
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 #This class exists for debug purposes. It tests that its associated
 #tree respects every constraint of a red black tree. Those are the constraints
 #that are checked:
@@ -1210,6 +1199,9 @@ end
 #	-The maximum depth of a leaf is never over twice as much as the minimum depth of a leaf.
 #	-Any node's left child is either lower or equivalent. Any node's right child is either
 #	 greater or equivalent.
+#What this validator does not do:
+#	-Assume anything about the support or the prevention of duplicate values. This
+#	 has to be tested elsewhere.
 class RBTreeValidator
 	private var tree: RBTree[ Object, Object ]
 	#Constructs a validator for the given tree.

@@ -25,8 +25,8 @@ abstract class RBTreeBaseTests
 		test_removals
 		print "retrievals"
 		test_retrievals		
-		print "size"
-		test_size
+		print "length"
+		test_length
 	end
 	
 	#Test basic removal facilities.
@@ -119,22 +119,22 @@ abstract class RBTreeBaseTests
 		assert_true( comparator.call( extract_key( iter.item ), 51 ) == 0, "retrieving the ceiling of removed 50 returned an iterator on {iter.item}" )
 	end
 	
-	#Test that the size returned by the tree under various insertion/deletion is always
+	#Test that the length returned by the tree under various insertion/deletion is always
 	#adequate.
-	fun test_size() do
+	fun test_length() do
 		clear
-		assert_true( size == 0, "empty tree has a size of {size}" )
+		assert_true( length == 0, "empty tree has a length of {length}" )
 		insert( make_element( 0 ) )
-		assert_true( size == 1, "one element tree has a size of {size}" )
+		assert_true( length == 1, "one element tree has a length of {length}" )
 		remove( 0 )
-		assert_true( size == 0, "empty tree after removal has a size of {size}" )
+		assert_true( length == 0, "empty tree after removal has a length of {length}" )
 		random_inserts( 0 , 100 )
-		assert_true( size == 100, "100 elements tree has a size of {size}" )
+		assert_true( length == 100, "100 elements tree has a length of {length}" )
 		random_removals( 20, 70 )
-		assert_true( size == 50, "50 elements tree after 50 removals have size of {size}" )
+		assert_true( length == 50, "50 elements tree after 50 removals have length of {length}" )
 		random_removals( 0, 20 )
 		random_removals( 70, 100 )
-		assert_true( size == 0, "empty tree after 50 removals have size of {size}" )
+		assert_true( length == 0, "empty tree after 50 removals have length of {length}" )
 	end
 	
 	#Test basic insertions and uses the iteration to verify that inserted
@@ -299,7 +299,7 @@ abstract class RBTreeBaseTests
 	protected fun ceiling( e: Key ): RBTreeBiIterator[ Element ] is abstract
 	protected fun has( e: Key ): Bool is abstract
 	protected fun is_empty(): Bool is abstract
-	protected fun size(): Int is abstract
+	protected fun length(): Int is abstract
 	protected fun clear() is abstract
 	protected fun insert( e: Element ) is abstract
 	protected fun remove( e: Key ) is abstract
@@ -345,18 +345,18 @@ class SinglyValuedTests
 		assert_true( is_empty, "clear tree is not empty" )
 	end
 	
-	redef fun test_size() do
+	redef fun test_length() do
 		super
 		clear
 		random_inserts( 0, 100 )
 		same_inserts( 50, 20 )
-		assert_true( size == 100, "inserting 20 duplicates on a 100 elements tree returns a size of {size}" )
+		assert_true( length == 100, "inserting 20 duplicates on a 100 elements tree returns a length of {length}" )
 		same_removals( 50, 20 )
-		assert_true( size == 99, "removing all duplicates returns a size of {size} (expecting 99)" )
+		assert_true( length == 99, "removing all duplicates returns a length of {length} (expecting 99)" )
 		random_removals( 0, 100 )
-		assert_true( size == 0, "empty tree have size of {size}" )
+		assert_true( length == 0, "empty tree have length of {length}" )
 		clear
-		assert_true( size == 0, "cleared tree have size of {size}" )		
+		assert_true( length == 0, "cleared tree have length of {length}" )		
 	end
 	
 	redef fun test_insertions() do
@@ -456,15 +456,15 @@ class MultiValuedTests
 		assert_true( count( 50 ) == 0, "removing unexisting duplicates returns a count of {count( 50 )}" )		
 	end
 	
-	redef fun test_size() do
+	redef fun test_length() do
 		super
 		clear
 		random_inserts( 0, 100 )
 		same_inserts( 50, 20 )
-		assert_true( size == 120, "120 element tree has a size of {size}" )
+		assert_true( length == 120, "120 element tree has a length of {length}" )
 		same_removals( 50, 20 )
 		random_removals( 0, 100 )
-		assert_true( size == 0, "empty tree after 120 removals have size of {size}" )
+		assert_true( length == 0, "empty tree after 120 removals have length of {length}" )
 	end
 	
 	redef fun test_insertions() do
@@ -544,8 +544,8 @@ class TreeSetTests
 	redef fun is_empty(): Bool do
 		return self.tree.is_empty
 	end
-	redef fun size() do
-		return self.tree.size
+	redef fun length() do
+		return self.tree.length
 	end
 	redef fun clear() do 
 		self.tree.clear
@@ -610,8 +610,8 @@ class TreeMultisetTests
 	redef fun is_empty(): Bool do
 		return self.tree.is_empty
 	end
-	redef fun size() do
-		return self.tree.size
+	redef fun length() do
+		return self.tree.length
 	end
 	redef fun clear() do 
 		self.tree.clear
@@ -627,7 +627,7 @@ class TreeMultisetTests
 		var count = 0
 		if has( e ) then
 			var iter = new BoundedIterator[ Element ].inclusive( self.tree.floor( e ), self.tree.ceiling( e ) )
-			count = algos.size( iter )
+			count = algos.length( iter )
 		end
 		return count 
 	end
@@ -686,8 +686,8 @@ class TreeMapTests
 	redef fun is_empty(): Bool do
 		return self.tree.is_empty
 	end
-	redef fun size() do
-		return self.tree.size
+	redef fun length() do
+		return self.tree.length
 	end
 	redef fun clear() do 
 		self.tree.clear
@@ -752,8 +752,8 @@ class TreeMultimapTests
 	redef fun is_empty(): Bool do
 		return self.tree.is_empty
 	end
-	redef fun size() do
-		return self.tree.size
+	redef fun length() do
+		return self.tree.length
 	end
 	redef fun clear() do 
 		self.tree.clear
@@ -769,7 +769,7 @@ class TreeMultimapTests
 		var count = 0
 		if has( e ) then
 			var iter = new BoundedIterator[ Element ].inclusive( self.tree.floor( e ), self.tree.ceiling( e ) )
-			count = algos.size( iter )
+			count = algos.length( iter )
 		end
 		return count 
 	end

@@ -33,7 +33,7 @@ class Algos
 #		return res
 #	end
 	
-	fun size( iter: Iterator[ nullable Object ] ): Int do
+	fun length( iter: Iterator[ nullable Object ] ): Int do
 		var size = 0
 		while iter.is_ok do
 			size += 1

@@ -51,23 +51,4 @@ class BoundedIterator[ T ]
 	
 end
 
-#Class for compatibility with the standard iterators. Do no call
-#equals on those.
-#class STDIter[ T ] 
-#	super Iter[ T ]
-#	var iter: Iterator[ T ]
-#	init ( i: Iterator[ T ] ) do
-#		self.iter = i
-#	end
-#	redef fun is_ok() do
-#		return self.iter.is_ok
-#	end
-#	redef fun next() do
-#		self.iter.next
-#	end
-#	redef fun item() do
-#		return self.iter.item
-#	end
-#end
- 
 
