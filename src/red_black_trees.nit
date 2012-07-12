@@ -2,6 +2,7 @@ import results
 import inserters
 import iterators
 import functions
+import algos
 
 #Class of red black tree nodes. Basically, in addition to usual
 #tree pointers the node holds a color, which is either red or black.
@@ -823,6 +824,11 @@ private class RBTree[ T, A ]
 	end
 end
 
+#A collection holding its elements in a sorted order. This particular prevents 
+#the existance of duplicates within it. It is implemented using a red black tree.
+#Therefore, insertion, deletion, access are all operations done in logarithmic
+#time (of the cardinality of the tree). Ascending/descending iteration is done
+#in O(nlg(n)).
 class TreeSet[ T ]
 	super RBTree[ T, T ]
 	super SortedInsertable[ T ]
@@ -830,8 +836,7 @@ class TreeSet[ T ]
 	
 	init() do super end
 	init with_comparator( c ) do super end
-	
-	
+		
 	#Inserts the element in the tree. If the element already exists, then
 	#it is replaced.
 	redef fun insert( e ) do
@@ -978,8 +983,7 @@ class TreeMultiset[ T ]
 	#The returned iterator is not reversed.
 	fun highest(): RBTreeBiIterator[ T ] do
 		return rb_highest
-	end
-	
+	end	
 	#Returns an iterator that iterates in ascending order.
 	fun iterator(): RBTreeBiIterator[ T ] do
 		return rb_iterator
@@ -987,12 +991,21 @@ class TreeMultiset[ T ]
 	#Returns an iterator that iterates in descending order.
 	fun reverse_iterator(): RBTreeRIterator[ T ] do
 		return rb_reverse_iterator
-	end	
-	
+	end		
 	#Returns the comparator object.
 	fun comparator(): Comparator[ A, A ] do
 		return self.comp
-	end		
+	end
+	#Returns the number of occurrences of the given object.
+	fun count( a: A ): Int do
+		var count = 0
+		var algos = new Algos
+		var f = floor( a )
+		if f.is_ok and is_equivalent( a, access_key( f.node.as( not null ) ) ) then
+			count = algos.length( new BoundedIterator[ T ].inclusive( f, ceiling( a ) ) )
+		end		
+		return count
+	end
 end
 
 class MapEntry[ K, V ]
@@ -1184,6 +1197,17 @@ class TreeMultimap[ K, V ]
 	#Returns the comparator object.
 	fun comparator(): Comparator[ A, A ] do
 		return self.comp
+	end
+	
+	#Returns the number of occurrences of the given key.
+	fun count( a: A ): Int do
+		var count = 0
+		var algos = new Algos
+		var f = floor( a )
+		if f.is_ok and is_equivalent( a, access_key( f.node.as( not null ) ) ) then
+			count = algos.length( new BoundedIterator[ T ].inclusive( f, ceiling( a ) ) )
+		end		
+		return count
 	end	
 	
 	redef fun access_key( n ) do

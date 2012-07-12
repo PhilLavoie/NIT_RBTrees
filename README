@@ -34,16 +34,33 @@ Design choices:
 	 that is very interesting but out of the scope of this project. A solution would be to return a positional object from which
 	 any iterator can be constructed but then again someone could just argue: why would someone want an unordered iterator starting
 	 elsewhere than from the root? Open question.
-	 
+	-The choice has been made to not differenciate methods names depending on if they work on keys or element. For example,
+	 has( e ) for a set/multiset have not been renamed to has_key( e ) for a map/multimap. The reason behind this is that
+	 it is obvious that the Map only knows how to compare keys, and not values. Therefore, the name is has( key ). However,
+	 this would have to be changed if someone would like to insert has_value( value ) to the tree. But beware, should a tree
+	 be aware of how to compare values? Also, we would have to change every other searching method: key_floor, key_ceiling,
+	 etc... Is there really a gain in clarity? I think not, but it is open for discussion, as usual.
+	-The ground rule is: insert elements, use keys to acces things and return iterators on access. Remove using iterators.
+	 Iterators return elements.
+	 Elements and keys for set/multiset are the same. Elements are map entries for map and keys are keys (MapEntry[ K, V ]
+	 and K respectively). Sufficient satellite code has been provided to cover for the missing facilities. Example:
+	 no trees a subset extraction method. Imagine that, for some reason, you would like to store all elements between
+	 min and max in an array. You can do this, provided you implement the array inserter (by redefinition for example)
+	 var a = new Array
+	 var algos = new Algos
+	 algos.copy( new BoundedIterator.inclusive( tree.ceiling( min ), tree.floor( max ) ), new BackInserter( a ) )
+	 This allows the interface of the trees to be lighten. Note that I really don't know why someone would like to extract
+	 a subset, since iteration on subset is provided.
+	 	 
 
 What has been left aside:
  -Support for operations on values for maps. Is it:
  	-Required
- 	-Advisable
+ 	-Advisable: I have never used them in my life and I don't see why someone should.
  -Some convenient methods have been added and some weren't. The choices are mostly arbitrary and further conveniences
   can easily be provided. See next point.
- -All facilities imaginable that uses the subset proposed are still to be implemented. Following are some examples
-  and some discussion on what should be considered if they are to be implemented.
+ -All facilities imaginable that uses the subset proposed can still be implemented, but most have been left aside. 
+  Following are some examples and some discussion on what should be considered if they are to be implemented.
  	-For instance, pop_highest does not exist, but can be done like this: 
  	 tree.remove_at( tree.highest() ) or tree.remove_at( tree.reverse_iterator )
   	-Another example: higher and lower methods. (Returns the first element lower or higher than the provided element). Can be done
@@ -53,13 +70,13 @@ What has been left aside:
   	 #Now f is on the lower element of 50, might be invalid.
   	 In fact, if it is to be implemented, it'll be exactly like that. NOTE that the interface has been designed in
   	 such a way that it works for BOTH multi and single version of trees (floor returns an iterator on the first element
-  	 in the ascending order that corresponds to the one provided, the previous one if it does not exist).
+  	 in the ascending order that corresponds to the one provided or the previous one if it does not exist).
  	-Provide an insert_all, for convenience (insert_all( c:Collection...) )
 	-Provide a remove_all -> This is more ambiguous. What does remove_all means on a multiset for example? Remove all 
-	 occurrences or remove one occurrence of every provided element. Because for a set remove_all surely means the latter.
-	 And on a multiset for example, does it mean remove_all_once or remove_every_possible_element_that_matches??? See next
+	 occurrences or remove one occurrence of every provided element. For a set remove_all surely means the latter.
+	 On a multiset for example, does it mean remove_all_once or remove_every_possible_element_that_matches??? See next
 	 point.
-	-Is it worth doing something like this: remove_once and remove_entirely for multi versions?
+	-Implementing remove_once and remove_entirely for multi versions.
 	 Remove entirely can now be done like this:
 	 var f = tree.floor( 50 )
 	 if f.item == 50 then

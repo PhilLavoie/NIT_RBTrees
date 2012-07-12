@@ -623,13 +623,7 @@ class TreeMultisetTests
 		self.tree.remove_at( self.tree.find( e ) )
 	end
 	redef fun count( e ) do
-		var algos = new Algos
-		var count = 0
-		if has( e ) then
-			var iter = new BoundedIterator[ Element ].inclusive( self.tree.floor( e ), self.tree.ceiling( e ) )
-			count = algos.length( iter )
-		end
-		return count 
+		return self.tree.count( e )
 	end
 	redef fun make_element( v ) do
 		return v
@@ -765,13 +759,7 @@ class TreeMultimapTests
 		self.tree.remove_at( self.tree.find( e ) )
 	end
 	redef fun count( e ) do
-		var algos = new Algos
-		var count = 0
-		if has( e ) then
-			var iter = new BoundedIterator[ Element ].inclusive( self.tree.floor( e ), self.tree.ceiling( e ) )
-			count = algos.length( iter )
-		end
-		return count 
+		return self.tree.count( e )
 	end
 	redef fun make_element( v ) do
 		return new MapEntry[ Int, String ]( v, v.to_s )
