@@ -2,6 +2,32 @@ import tests
 import red_black_trees
 import algos
 import iterators
+import functions
+
+#Order integers such that odds come first.
+#When both compared values have the same oddity, then
+#the natural ordering is returned.
+class OddFirstComparator
+	super Comparator[ Int, Int ]
+	redef fun call( lhs, rhs ) do
+		if lhs == rhs then return 0
+		#rhs and lhs are now different
+		#If lhs is odd
+		if not lhs % 2 == 0 then
+			#if lhs and rhs are odd and rhs is lower, than lhs is higher.
+			if not rhs % 2 == 0 and rhs < lhs then return 1
+			#Otherwise, lhs is lower
+			return -1		
+		end
+		#lhs is even.
+		#If rhs is even and higher, then lhs is lower.
+		if rhs % 2 == 0 and lhs < rhs then
+			return -1
+		end
+		#Otherwise lhs is higher 
+		return 1
+	end
+end
 
 #Grouping of common functions for all tests on red black trees.
 #A subclass should EXTEND every function and not just overwrite it
@@ -13,7 +39,10 @@ import iterators
 abstract class RBTreeBaseTests
 	super Tests	
 	
+	#This type is for generalizing the methods only.
+	#In fact, it should either be an Int or a MapEntry[ Int, Something ]
 	type Element: Object
+	#This is designed to be an Int regardless of the tree used.
 	type Key: Object
 	
 	#Entry point for tests. Launches all tests and prints an informative
@@ -27,6 +56,53 @@ abstract class RBTreeBaseTests
 		test_retrievals		
 		print "length"
 		test_length
+		print "with other comparator"
+		test_other_comparator
+	end
+	
+	#Test basic facilities using a custom comparator.
+	fun test_other_comparator do
+		use_comparator( new OddFirstComparator )
+		clear
+		var expected_result = new Array[ Element ].filled_with( -1, 100 )
+		for i in [ 0 .. 100 [ do
+			if i % 2 == 1 then
+				expected_result[ i / 2 ]  = make_element( i )
+			else
+				expected_result[ ( i / 2 ) + 50 ] = make_element( i )
+			end
+		end
+		var reverse_exp_res = expected_result.reversed
+		random_inserts( 0, 100 )
+		validate( "invalid tree after 100 random insertions using a custom comparator" )
+		test_equals( expected_result.iterator, iterator )
+		test_equals( reverse_exp_res.iterator, reverse_iterator )
+		#At this point, we assume that the ordering works correctly, meaning
+		#the lower semantic is used appropriately.
+		#Removals and retrievals, however, additionally use the equals semantics 
+		#of the comparator, therefore we assume we only have to test one of them.
+		#We'll use the retrievals because it is easier to implement.
+		var iter = find( 50 )
+		assert_true( iter.is_ok, "cannot retrieve 50" )
+		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "retrieving 50 returned {iter.item}" )
+		iter = floor( 100 )
+		assert_true( iter.is_ok, "cannot retrieve floor of 100" )
+		assert_true( comparator.call( extract_key( iter.item ), 98 ) == 0, "retrieving floor of 100 returned {iter.item}" )
+		iter = floor( 101 )
+		assert_true( iter.is_ok, "cannot retrieve floor of 101" )
+		assert_true( comparator.call( extract_key( iter.item ), 99 ) == 0, "retrieving floor of 101 returned {iter.item}" )
+		iter = ceiling( -2 )
+		assert_true( iter.is_ok, "cannot retrieve ceiling of -2" )
+		assert_true( comparator.call( extract_key( iter.item ), 0 ) == 0, "retrieving ceiling of -2 returned {iter.item}" )
+		iter = ceiling( -1 )
+		assert_true( iter.is_ok, "cannot retrieve ceiling of -1" )
+		assert_true( comparator.call( extract_key( iter.item ), 1 ) == 0, "retrieving ceiling of -1 returned {iter.item}" )
+		iter = lowest()
+		assert_true( iter.is_ok, "cannot retrieve lowest" )
+		assert_true( comparator.call( extract_key( iter.item ), 1 ) == 0, "retrieving lowest returned {iter.item}" )
+		iter = highest()
+		assert_true( iter.is_ok, "cannot retrieve highest" )
+		assert_true( comparator.call( extract_key( iter.item ), 98 ) == 0, "retrieving lowest returned {iter.item}" )		
 	end
 	
 	#Test basic removal facilities.
@@ -88,6 +164,25 @@ abstract class RBTreeBaseTests
 		assert_true( is_empty, "unempty tree after random removals of all elements" )
 		clear
 		validate( "invalid tree after clearing on emtpy tree" )
+			
+		#Testing the remove_at feature when removing a group
+		clear
+		random_inserts( 0, 100 )
+		var iter = lowest()
+		assert_true( iter.is_ok, "could not retrieve lowest" )
+		#If it does not work, this will either hang or finish too early.
+		while iter.is_ok do
+			remove_at( iter )
+		end	
+		assert_true( is_empty, "tree of size {length} after the removal of every element" )	
+		random_inserts( 0, 100 )
+		var riter = highest().reverse
+		assert_true( riter.is_ok, "could not retrieve lowest" )
+		#If it does not work, this will either hang or finish too early.
+		while riter.is_ok do
+			remove_at( riter )
+		end	
+		assert_true( is_empty, "tree of size {length} after the reverse removal of every element" )
 	end
 
 	#Test basic retrievals facilities.
@@ -96,26 +191,60 @@ abstract class RBTreeBaseTests
 		assert_false( has( 50 ), "empty tree has value 50" )
 		var iter = find( 50 )
 		assert_false( iter.is_ok, "retrieving in an empty tree returns a valid iterator" )
+		iter = floor( 50 )
+		assert_false( iter.is_ok, "empty tree has floor of 50" )
+		iter = ceiling( 50 )
+		assert_false( iter.is_ok, "empty tree has ceiling of 50" )
+		iter = lowest
+		assert_false( iter.is_ok, "empty tree has lowest" )
+		iter = highest
+		assert_false( iter.is_ok, "empty tree has highest" )
+		
 		insert( make_element( 50 ) )
 		iter = find( 50 )
 		assert_true( iter.is_ok, "retrieving the only element in a tree returns an invalid iterator" )
 		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "retrieve the only element, 50, in a tree returns an iterator on {iter.item}" )
+		#The has test is only going to be used once.
+		#We assume that if find works, has works.
+		assert_true( has( 50 ), "a tree with element 50 returns false for has" )
 
 		clear
 		random_inserts( 0, 100 )
 		iter = find( 50 )
+		assert_true( iter.is_ok, "cannot retrieve 50" )
 		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "retrieving 50 returned an iterator on {iter.item}" )
 		iter = floor( 50 )
+		assert_true( iter.is_ok, "cannot retrieve floor of 50" )
 		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "retrieving floor of 50 returned an iterator on {iter.item}" )		
 		iter = ceiling( 50 )
+		assert_true( iter.is_ok, "cannot retrieve  ceiling 50" )		
 		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "retrieving floor of 50 returned an iterator on {iter.item}" )		
-		remove( 50 )
+		iter.next
+		assert_true( comparator.call( extract_key( iter.item ), 51 ) == 0, "next of 50 is {iter.item}" )
+		iter.previous
+		iter.previous
+		assert_true( comparator.call( extract_key( iter.item ), 49 ) == 0, "previous of 50 is {iter.item}" )
+		iter = ceiling( -1 )
+		assert_true( iter.is_ok, "cannot retrieve ceiling of -1" )
+		assert_true( comparator.call( extract_key( iter.item ), 0 ) == 0, "retrieving ceiling of -1 returned {iter.item}" )
+		iter = floor( 100 )
+		assert_true( iter.is_ok, "cannot retrieve floor of 100" )
+		assert_true( comparator.call( extract_key( iter.item ), 99 ) == 0, "retrieving floor of 100 returned {iter.item}" )
+		iter = lowest()
+		assert_true( iter.is_ok, "cannot retrieve lowest" )
+		assert_true( comparator.call( extract_key( iter.item ), 0 ) == 0, "retrieving lowest returned {iter.item}" )
+		iter = highest()
+		assert_true( iter.is_ok, "cannot retrieve highest" )
+		assert_true( comparator.call( extract_key( iter.item ), 99 ) == 0, "retrieving lowest returned {iter.item}" )	
 		
+		remove( 50 )		
 		iter = find( 50 )
 		assert_false( iter.is_ok, "retrieving removed 50 returns a valid iterator" )
 		iter = floor( 50 )
+		assert_true( iter.is_ok, "cannot retrieve floor of removed 50" )
 		assert_true( comparator.call( extract_key( iter.item ), 49 ) == 0, "retrieving the floor of removed 50 returned an iterator on {iter.item}" )
 		iter = ceiling( 50 )
+		assert_true( iter.is_ok, "cannot retrieve ceiling of removed 50" )		
 		assert_true( comparator.call( extract_key( iter.item ), 51 ) == 0, "retrieving the ceiling of removed 50 returned an iterator on {iter.item}" )
 	end
 	
@@ -180,7 +309,8 @@ abstract class RBTreeBaseTests
 	#Utility methods
 	#---------------------------------------
 	
-	
+	#Asserts that both iterator returns the same element, as provided by the tree comparator.
+	#Prints an error message if both iteration does not return the same set of elements.
 	protected fun test_equals( exp_res_iter: Iterator[ Element ], eff_res_iter: Iterator[ Element ] ) do
 		var algos = new Algos()
 		var exp_res = new List[ Key ]
@@ -199,18 +329,21 @@ abstract class RBTreeBaseTests
 		)
 	end
 
+	#Sequentially inserts elements between [ min .. max [
 	protected fun forward_inserts( min: Int, max: Int ) do
 		for i in [ min .. max [ do
 			insert( make_element( i ) )
 		end
 	end
-
+	
+	#Sequentially removes elements between [ min .. max [
 	protected fun forward_removals( min: Int, max: Int ) do
 		for i in [ min .. max [ do
 			remove( i )
 		end
 	end
 
+	#Sequentially inserts elements between [ min .. max ], but in the reverse order.
 	protected fun backward_inserts( min: Int, max: Int ) do
 		var i = max - 1
 		while min <= i do
@@ -219,6 +352,7 @@ abstract class RBTreeBaseTests
 		end
 	end
 
+	#Sequentially removes elements between [ min .. max ], but in the reverse order.
 	protected fun backward_removals( min: Int, max: Int ) do
 		var i = max - 1
 		while min <= i do
@@ -227,18 +361,21 @@ abstract class RBTreeBaseTests
 		end
 	end
 
+	#Inserts the given element the number of times provided.
 	protected fun same_inserts( value: Int, times: Int ) do 
 		for i in [ 1 .. times ] do
 			insert( make_element( value ) )
 		end
 	end
 
+	#Removes the given element the number of times provided.
 	protected fun same_removals( value: Int, times: Int ) do 
 		for i in [ 1 .. times ] do
 			remove( value )
 		end
 	end
 
+	#Randomly inserts elements from [ min ... max [.
 	protected fun random_inserts( min: Int, max: Int ) do
 		var count = max - min
 		var table = new Array[ Element ].with_capacity( count )
@@ -253,6 +390,7 @@ abstract class RBTreeBaseTests
 		end
 	end
 
+	#Randomly removes elements from [ min ... max [.
 	protected fun random_removals( min: Int, max: Int ) do
 		var count = max - min
 		var table = new Array[ Int ].with_capacity( count )
@@ -293,6 +431,9 @@ abstract class RBTreeBaseTests
 	#here.
 	#---------------------------------------
 	
+	protected fun highest(): RBTreeBiIterator[ Element ] is abstract 
+	protected fun lowest(): RBTreeBiIterator[ Element ] is abstract 
+	protected fun use_comparator( c: Comparator[ Key, Key ] ) is abstract
 	protected fun comparator(): Comparator[ Key, Key ] is abstract
 	protected fun find( e: Key ): RBTreeBiIterator[ Element ] is abstract
 	protected fun floor( e: Key ): RBTreeBiIterator[ Element ] is abstract
@@ -303,32 +444,38 @@ abstract class RBTreeBaseTests
 	protected fun clear() is abstract
 	protected fun insert( e: Element ) is abstract
 	protected fun remove( e: Key ) is abstract
+	protected fun remove_at( i: RBTreeIterator[ Element ] ): RBTreeIterator[ Element ] is abstract
 	protected fun iterator(): RBTreeBiIterator[ Element ] is abstract
 	protected fun reverse_iterator(): RBTreeRIterator[ Element ] is abstract
 end
 
+#Extends the testing algorithms to test that the collections
+#prevent insertion of duplicates.
 class SinglyValuedTests
 	super RBTreeBaseTests
 	
-	#TODO find another place to test counts	
 	redef fun test_retrievals() do
 		super
 		var algos = new Algos
 		clear
 		random_inserts( 0, 100 )
 		same_inserts( 50, 19 )
-		var iter = floor( 50 )
-		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "retrieving floor of 50 on 20 fake duplicates returned an iterator on {iter.item}" )
-#		var count = algos.count( iter, 50, new ComparatorEquals[ Key, Key ]( comparator ) )
-#		assert_true( count == 1, "counting the element on floor of 50 returns {count} when expecting 1" )
-		iter = ceiling( 50 )
+		var iter = find( 50 )
 		assert_true( 
 			comparator.call( extract_key( iter.item ), 50 ) == 0,
-			"retrieving ceiling of 50 on 20 fake duplicates returned an iterator on {iter.item}" 
+			"retrieving 50 on 20 fake duplicates returned an iterator on {iter.item}" 
 		)
-		var riter = iter.reverse
-#		count = algos.count( riter, 50, new ComparatorEquals[ Key, Key ]( comparator ) )
-#		assert_true( count == 1, "counting the element on ceiling of 50 returns {count} when expecting 1" )		
+		iter.next
+		assert_true( 
+			comparator.call( extract_key( iter.item ), 51 ) == 0,
+			"moving on the next element on 20 fakes duplicates returned {iter.item}" 
+		)
+		iter.previous
+		iter.previous
+		assert_true( 
+			comparator.call( extract_key( iter.item ), 49 ) == 0,
+			"moving on the previous element on 20 fakes duplicates returned {iter.item}" 
+		)
 	end	
 	
 	redef fun test_removals() do
@@ -342,7 +489,7 @@ class SinglyValuedTests
 		same_removals( 50, 4 )
 		assert_false( has( 50 ), "able to retrieve 50 after further removals even if it was previously unexistant" )
 		clear
-		assert_true( is_empty, "clear tree is not empty" )
+		assert_true( is_empty, "clear tree is not empty" )		
 	end
 	
 	redef fun test_length() do
@@ -391,14 +538,23 @@ class SinglyValuedTests
 		test_equals( expected_result.iterator, iterator )
 		test_equals( reverse_exp_res.iterator, reverse_iterator )
 	end
+	
+	redef fun test_other_comparator() do
+		super
+		clear
+		random_inserts( 0, 100 )
+		same_inserts( 50, 19 )
+		assert_true( length == 100, "inserting 19 fake duplicates on a 100 element tree returns a size of {length}" )
+		assert_true( has( 50 ), "cannot retrieve element 50" )
+	end
+	
 end
 
-#This class extends the test cases to test
-#that the collection correctly support duplicate values.
+#This class extends the test cases make sure 
+#the collections support duplicate values.
 class MultiValuedTests
 	super RBTreeBaseTests
 	
-	#TODO find another place to test counts	
 	redef fun test_retrievals() do
 		super
 		
@@ -407,31 +563,55 @@ class MultiValuedTests
 		clear
 		random_inserts( 0, 100 )
 		same_inserts( 50, 19 )
-		
-		var iter = floor( 50 )
+
+		assert_true( count( 50 ) == 20, "20 duplicates of 50 returns a count of {count(50)}" )		
+		var iter = find( 50 )
+		assert_true( 
+			comparator.call( extract_key( iter.item ), 50 ) == 0,
+			"retrieving 50 on 20 duplicates returned an iterator on {iter.item}" )
+		iter = floor( 50 )
 		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "retrieving floor of 50 on 20 duplicates returned an iterator on {iter.item}" )
-#		var count = algos.count( iter, 50, new ComparatorEquals[ Key, Key ]( comparator ) )
-#		assert_true( count == 20, "counting the element on floor of 50 returns {count} when expecting 20" )
+		iter.next
+		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "next on floor of 20 duplicates of 50 is {iter.item}" )
+		iter.previous
+		iter.previous
+		assert_true( comparator.call( extract_key( iter.item ), 49 ) == 0, "previous on floor of 20 duplicates of 50 is {iter.item}" )
 		iter = ceiling( 50 )
-		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "retrieving ceiling of 50 on 20 duplicates returned an iterator on {iter.item}" )
-		var riter = iter.reverse
-#		count = algos.count( riter, 50, new ComparatorEquals[ Key, Key ]( comparator ) )
-#		assert_true( count == 20, "counting the element on ceiling of 50 returns {count} when expecting 20" )
+		assert_true( 
+			comparator.call( extract_key( iter.item ), 50 ) == 0,
+			"retrieving ceiling of 50 on 20 duplicates returned an iterator on {iter.item}" )
+		iter.next
+		assert_true( comparator.call( extract_key( iter.item ), 51 ) == 0, "next on ceiling of 20 duplicates of 50 is {iter.item}" )
+		iter.previous
+		iter.previous
+		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "previous on ceiling of 20 duplicates of 50 is {iter.item}" )
 		
 		#This here is a special case known to have broken the tree at least once.
 		clear
 		same_inserts( 0, 2 )
 		same_inserts( 100, 1 )
 		same_inserts( 50, 5 )
+		assert_true( count( 50 ) == 5, "5 duplicates of 50 returns a count of {count(50)}" )	
+		iter = find( 50 )
+		assert_true( 
+			comparator.call( extract_key( iter.item ), 50 ) == 0,
+			"retrieving 50 on 5 duplicates returned an iterator on {iter.item}" )
 		iter = floor( 50 )
 		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "retrieving floor of 50 on 5 duplicates returned an iterator on {iter.item}" )
-#		count = algos.count( iter, 50, new ComparatorEquals[ Key, Key ]( comparator ) )
-#		assert_true( count == 5, "counting the element on floor of 50 returns {count} when expecting 5" )
+		iter.next
+		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "next on floor of 5 duplicates of 50 is {iter.item}" )
+		iter.previous
+		iter.previous
+		assert_true( comparator.call( extract_key( iter.item ), 0 ) == 0, "previous on floor of 5 duplicates of 50 is {iter.item}" )
 		iter = ceiling( 50 )
-		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "retrieving ceiling of 50 on 5 duplicates returned an iterator on {iter.item}" )
-		riter = iter.reverse
-#		count = algos.count( riter, 50, new ComparatorEquals[ Key, Key ]( comparator ) )
-#		assert_true( count == 5, "counting the element on ceiling of 50 returns {count} when expecting 5")
+		assert_true( 
+			comparator.call( extract_key( iter.item ), 50 ) == 0,
+			"retrieving ceiling of 50 on 5 duplicates returned an iterator on {iter.item}" )
+		iter.next
+		assert_true( comparator.call( extract_key( iter.item ), 100 ) == 0, "next on ceiling of 5 duplicates of 50 is {iter.item}" )
+		iter.previous
+		iter.previous
+		assert_true( comparator.call( extract_key( iter.item ), 50 ) == 0, "previous on ceiling of 5 duplicates of 50 is {iter.item}" )		
 	end	
 	
 	redef fun test_removals() do
@@ -453,7 +633,30 @@ class MultiValuedTests
 		same_removals( 50, 13 )
 		assert_true( count( 50 ) == 0, "removing all duplicate out of 20 returns a count of {count( 50 )}" )
 		same_removals( 50, 20 )
-		assert_true( count( 50 ) == 0, "removing unexisting duplicates returns a count of {count( 50 )}" )		
+		assert_true( count( 50 ) == 0, "removing unexisting duplicates returns a count of {count( 50 )}" )	
+		
+		#Testing the remove_at feature when removing a group
+		clear
+		random_inserts( 0, 100 )
+		same_inserts( 50, 19 )
+		var f = floor( 50 )
+		assert_true( comparator.call( extract_key( f.item ), 50 ) == 0, "retrieving floor of 50 returned an iterator on {f.item}" )
+		while comparator.call( extract_key( f.item ), 50 ) == 0 do
+			remove_at( f )
+		end
+		assert_true( count( 50 ) == 0, "did not remove all occurrences, missing {count(50)}" )
+		assert_true( length == 99, "removed more than just the duplicates, new length is {length}" )
+		assert_true( comparator.call( extract_key( f.item ), 51 ) == 0, "iter on {f.item} after removals" )
+		#Redoing the same thing but with the reverse iterator.
+		same_inserts( 50, 20 )
+		var c = ceiling( 50 ).reverse
+		assert_true( comparator.call( extract_key( c.item ), 50 ) == 0, "retrieving floor of 50 returned an iterator on {c.item}" )
+		while comparator.call( extract_key( c.item ), 50 ) == 0 do
+			remove_at( c )
+		end
+		assert_true( count( 50 ) == 0, "did not remove all occurrences, missing {count(50)}" )
+		assert_true( length == 99, "removed more than just the duplicates, new length is {length}" )
+		assert_true( comparator.call( extract_key( c.item ), 49 ) == 0, "iter on {c.item} after reverse removals" )
 	end
 	
 	redef fun test_length() do
@@ -504,9 +707,22 @@ class MultiValuedTests
 		test_equals( reverse_exp_res.iterator, reverse_iterator )
 	end
 	
+	redef fun test_other_comparator() do
+		super
+		clear
+		random_inserts( 0, 100 )
+		same_inserts( 50, 19 )
+		assert_true( length == 119, "inserting 19 duplicates on a 100 element tree returns a size of {length}" )
+		assert_true( count( 50 ) == 20, "count of 20 duplicates returns {count(50)}" )
+	end
+	
 	protected fun count( e: Key ): Int is abstract
 end
 
+#Test class for tree sets.
+#This class redefines every property to allow the general
+#algorithms to work properly. It is nothing but the bridge
+#between the algorithms and the tree.
 class TreeSetTests 
 	super SinglyValuedTests
 	
@@ -526,6 +742,15 @@ class TreeSetTests
 		print "*****************************"
 	end
 	
+	redef fun highest() do
+		return self.tree.highest
+	end
+	redef fun lowest() do
+		return self.tree.lowest
+	end
+	redef fun use_comparator( c: Comparator[ Key, Key ] ) do
+		self.tree = new TreeSet[ Element ].with_comparator( c )
+	end
 	redef fun find( e ) do
 		return self.tree.find( e )
 	end
@@ -571,8 +796,15 @@ class TreeSetTests
 	redef fun reverse_iterator() do
 		return self.tree.reverse_iterator
 	end
+	redef fun remove_at( i ) do
+		return self.tree.remove_at( i )
+	end
 end
 
+#Test class for tree multisets.
+#This class redefines every property to allow the general
+#algorithms to work properly. It is nothing but the bridge
+#between the algorithms and the tree.
 class TreeMultisetTests 
 	super MultiValuedTests
 	
@@ -592,6 +824,15 @@ class TreeMultisetTests
 		print "*****************************"
 	end
 	
+	redef fun highest() do
+		return self.tree.highest
+	end
+	redef fun lowest() do
+		return self.tree.lowest
+	end
+	redef fun use_comparator( c: Comparator[ Key, Key ] ) do
+		self.tree = new TreeMultiset[ Element ].with_comparator( c )
+	end
 	redef fun find( e ) do
 		return self.tree.find( e )
 	end
@@ -640,8 +881,15 @@ class TreeMultisetTests
 	redef fun reverse_iterator() do
 		return self.tree.reverse_iterator
 	end
+	redef fun remove_at( i ) do
+		return self.tree.remove_at( i )
+	end
 end
 
+#Test class for tree maps.
+#This class redefines every property to allow the general
+#algorithms to work properly. It is nothing but the bridge
+#between the algorithms and the tree.
 class TreeMapTests 
 	super SinglyValuedTests
 	
@@ -660,8 +908,17 @@ class TreeMapTests
 		print "*****************************"
 		super
 		print "*****************************"
-	end
+	end	
 	
+	redef fun highest() do
+		return self.tree.highest
+	end
+	redef fun lowest() do
+		return self.tree.lowest
+	end
+	redef fun use_comparator( c: Comparator[ Key, Key ] ) do
+		self.tree = new TreeMap[ Int, String ].with_comparator( c )
+	end
 	redef fun find( e ) do
 		return self.tree.find( e )
 	end
@@ -707,8 +964,15 @@ class TreeMapTests
 	redef fun reverse_iterator() do
 		return self.tree.reverse_iterator
 	end
+	redef fun remove_at( i ) do
+		return self.tree.remove_at( i )
+	end
 end
 
+#Test class for tree multimaps.
+#This class redefines every property to allow the general
+#algorithms to work properly. It is nothing but the bridge
+#between the algorithms and the tree.
 class TreeMultimapTests 
 	super MultiValuedTests
 	
@@ -728,6 +992,15 @@ class TreeMultimapTests
 		print "*****************************"
 	end
 	
+	redef fun highest() do
+		return self.tree.highest
+	end
+	redef fun lowest() do
+		return self.tree.lowest
+	end
+	redef fun use_comparator( c: Comparator[ Key, Key ] ) do
+		self.tree = new TreeMultimap[ Int, String ].with_comparator( c )
+	end	
 	redef fun find( e ) do
 		return self.tree.find( e )
 	end
@@ -776,10 +1049,12 @@ class TreeMultimapTests
 	redef fun reverse_iterator() do
 		return self.tree.reverse_iterator
 	end
+	redef fun remove_at( i ) do
+		return self.tree.remove_at( i )
+	end
 end
 
-
-
+#Launches all test cases.
 var mset_tests = new TreeMultisetTests()
 mset_tests.test_all
 var set_tests = new TreeSetTests()

@@ -2,6 +2,9 @@ Packages provided for the extension of the NIT standard library. In particular, 
 on the red black tree: TreeSet, TreeMultiset, TreeMap and TreeMultimap. One package provides all the source needed
 to make those collections work. The other package (tests), is one for automating regression testing.
 
+How to run the tests from the main directory:
+nitc -o OUTFILE -I src tests/red_black_trees_tests.nit 
+
 Design choices:
 	-Minimal convenience for first release-> But the power to do everything.
 	-Some kind of conformity with the collections in NIT library has been provided, but no direct plugging under
@@ -56,7 +59,7 @@ Design choices:
 What has been left aside:
  -Support for operations on values for maps. Is it:
  	-Required
- 	-Advisable: I have never used them in my life and I don't see why someone should.
+ 	-Advisable: I have yet to be convinced of why someone would try to operate on values in a map (remove, retrieve, mainly access operations, ...).
  -Some convenient methods have been added and some weren't. The choices are mostly arbitrary and further conveniences
   can easily be provided. See next point.
  -All facilities imaginable that uses the subset proposed can still be implemented, but most have been left aside. 
@@ -81,8 +84,12 @@ What has been left aside:
 	 var f = tree.floor( 50 )
 	 if f.item == 50 then
 		 while f.item == 50 do
-		    f = tree.remove_at( 50 )
+		    tree.remove_at( f )
 		 end
+	 end
+	 Or like this:
+	 while tree.has( 50 ) do
+		tree.remove_at( find( 50 ) )	 
 	 end
 	 Remove once can be done like this:
 	 tree.remove_at( tree.find( 50 ) )
@@ -93,6 +100,5 @@ What has been left aside:
   that that does not provide any order, but guarantees a O(n) iteration.
  
 
-What's left for testing:
--Test with different comparators
--Test multimaps with duplicate keys having different values
+What's known tests haven't been implemented:
+-Test multimaps with duplicate keys having different values (though duplicate keys with same values have been tested)

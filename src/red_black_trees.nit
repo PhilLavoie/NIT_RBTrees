@@ -311,7 +311,7 @@ private class RBTree[ T, A ]
 		#Move the replacement value to the removed one.
 		if r != n then 
 			n.element = r.element
-			#If it turns out that the next value if the replacement, then
+			#If it turns out that the next value is the replacement, then
 			#we reset the iterator on its previous node.
 			if iter.node == r then iter.node = n
 		end
@@ -359,12 +359,12 @@ private class RBTree[ T, A ]
 		return new RBTreeBiIterator[ T ].inplace( find_node( a ) )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
-	#the previous in order. Returns an invalid iterator if no such element exists.
+	#the previous in ascending order. Returns an invalid iterator if no such element exists.
 	private fun rb_floor( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( floor_node( a ) )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
-	#the next in order. Returns an invalid iterator if no such element exists.
+	#the next in ascending order. Returns an invalid iterator if no such element exists.
 	private fun rb_ceiling( a: A ): RBTreeBiIterator[ T ] do
 		return new RBTreeBiIterator[ T ].inplace( ceiling_node( a ) )
 	end
@@ -419,7 +419,7 @@ private class RBTree[ T, A ]
 				#there might be multiple instances of the same element,
 				#we have to fetch the one that comes first in the iteration.
 				var iter = new RBTreeRIterator[ T ].inplace( n )
-				while iter.is_ok and is_equivalent( a, access_key( iter.node.as( not null ) ) ) do
+				while iter.is_ok and is_same( a, access_key( iter.node.as( not null ) ) ) do
 					floor = iter.node
 					iter.next					
 				end	
@@ -446,7 +446,7 @@ private class RBTree[ T, A ]
 				#there might be multiple instances of the same element,
 				#we have to fetch the one that comes first in the iteration.
 				var iter = new RBTreeBiIterator[ T ].inplace( n )
-				while iter.is_ok and is_equivalent( a, access_key( iter.node.as( not null ) ) ) do
+				while iter.is_ok and is_same( a, access_key( iter.node.as( not null ) ) ) do
 					ceiling = iter.node
 					iter.next					
 				end	
@@ -462,7 +462,7 @@ private class RBTree[ T, A ]
 	private fun access_key( n: RBTreeNode[ T ] ): A is abstract
 		
 	#Returns true if the comparator returns 0.
-	private fun is_equivalent( lhs: A, rhs: A ): Bool do
+	private fun is_same( lhs: A, rhs: A ): Bool do
 		return self.comp.call( lhs, rhs ) == 0
 	end	
 	
@@ -496,7 +496,7 @@ private class RBTree[ T, A ]
 			else if is_lower( access_key( n ), a ) then
 				n = n.right
 			#Equivalence, if !( x < y ) and !( y < x ) then x == y.
-			else if is_equivalent( a, access_key( n ) ) then
+			else if is_same( a, access_key( n ) ) then
 				node_found = true			
 			else
 				#TODO remove after debugging?
@@ -892,12 +892,12 @@ class TreeSet[ T ]
 		return rb_find( a )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
-	#the previous in order. Returns an invalid iterator if no such element exists.
+	#the previous in ascending order. Returns an invalid iterator if no such element exists.
 	fun floor( a: A ): RBTreeBiIterator[ T ] do
 		return rb_floor( a )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
-	#the next in order. Returns an invalid iterator if no such element exists.
+	#the next in ascending order. Returns an invalid iterator if no such element exists.
 	fun ceiling( a: A ): RBTreeBiIterator[ T ] do
 		return rb_ceiling( a )
 	end
@@ -986,12 +986,12 @@ class TreeMultiset[ T ]
 		return rb_find( a )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
-	#the previous in order. Returns an invalid iterator if no such element exists.
+	#the previous in ascending order. Returns an invalid iterator if no such element exists.
 	fun floor( a: A ): RBTreeBiIterator[ T ] do
 		return rb_floor( a )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
-	#the next in order. Returns an invalid iterator if no such element exists.
+	#the next in ascending order. Returns an invalid iterator if no such element exists.
 	fun ceiling( a: A ): RBTreeBiIterator[ T ] do
 		return rb_ceiling( a )
 	end
@@ -1021,7 +1021,7 @@ class TreeMultiset[ T ]
 		var count = 0
 		var algos = new Algos
 		var f = floor( a )
-		if f.is_ok and is_equivalent( a, access_key( f.node.as( not null ) ) ) then
+		if f.is_ok and is_same( a, access_key( f.node.as( not null ) ) ) then
 			count = algos.length( new BoundedIterator[ T ].inclusive( f, ceiling( a ) ) )
 		end		
 		return count
@@ -1112,12 +1112,12 @@ class TreeMap[ K, V ]
 		return rb_find( a )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
-	#the previous in order. Returns an invalid iterator if no such element exists.
+	#the previous in ascending order. Returns an invalid iterator if no such element exists.
 	fun floor( a: A ): RBTreeBiIterator[ T ] do
 		return rb_floor( a )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
-	#the next in order. Returns an invalid iterator if no such element exists.
+	#the next in ascending order. Returns an invalid iterator if no such element exists.
 	fun ceiling( a: A ): RBTreeBiIterator[ T ] do
 		return rb_ceiling( a )
 	end
@@ -1211,12 +1211,12 @@ class TreeMultimap[ K, V ]
 		return rb_find( a )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
-	#the previous in order. Returns an invalid iterator if no such element exists.
+	#the previous in ascending order. Returns an invalid iterator if no such element exists.
 	fun floor( a: A ): RBTreeBiIterator[ T ] do
 		return rb_floor( a )
 	end
 	#Returns an iterator on either the element or, if it does not exist,
-	#the next in order. Returns an invalid iterator if no such element exists.
+	#the next in ascending order. Returns an invalid iterator if no such element exists.
 	fun ceiling( a: A ): RBTreeBiIterator[ T ] do
 		return rb_ceiling( a )
 	end
@@ -1249,7 +1249,7 @@ class TreeMultimap[ K, V ]
 		var count = 0
 		var algos = new Algos
 		var f = floor( a )
-		if f.is_ok and is_equivalent( a, access_key( f.node.as( not null ) ) ) then
+		if f.is_ok and is_same( a, access_key( f.node.as( not null ) ) ) then
 			count = algos.length( new BoundedIterator[ T ].inclusive( f, ceiling( a ) ) )
 		end		
 		return count
@@ -1461,11 +1461,11 @@ class RBTreeValidator
 	private fun check_node_binary_semantic( n: RBTreeNode[ Object ] ): Result do
 		if n.has_left and 
 			not ( self.tree.is_lower( self.tree.access_key( n.left.as( not null ) ), self.tree.access_key( n.as( not null ) ) ) or
-				self.tree.is_equivalent( self.tree.access_key( n.left.as( not null ) ), self.tree.access_key( n.as( not null ) ) ) ) then
+				self.tree.is_same( self.tree.access_key( n.left.as( not null ) ), self.tree.access_key( n.as( not null ) ) ) ) then
 			return new Result.invalid( "{n.element} has left child {n.left.element} which violates binary search semantics")
 		else if n.has_right and
 			not ( self.tree.is_lower( self.tree.access_key( n.as( not null ) ), self.tree.access_key( n.right.as( not null ) ) ) or 
-				self.tree.is_equivalent( self.tree.access_key( n.as( not null ) ), self.tree.access_key( n.right.as( not null ) ) ) ) then
+				self.tree.is_same( self.tree.access_key( n.as( not null ) ), self.tree.access_key( n.right.as( not null ) ) ) ) then
 			return new Result.invalid( "{n.element} has right child {n.right.element} which violates binary search semantics")		
 		end
 		return new Result.valid
