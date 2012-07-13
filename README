@@ -47,7 +47,7 @@ Design choices:
 	 Iterators return elements.
 	 Elements and keys for set/multiset are the same. Elements are map entries for map and keys are keys (MapEntry[ K, V ]
 	 and K respectively). Sufficient satellite code has been provided to cover for the missing facilities. Example:
-	 no trees a subset extraction method. Imagine that, for some reason, you would like to store all elements between
+	 no trees have a subset extraction method. Imagine that, for some reason, you would like to store all elements between
 	 min and max in an array. You can do this, provided you implement the array inserter (by redefinition for example)
 	 var a = new Array
 	 var algos = new Algos
