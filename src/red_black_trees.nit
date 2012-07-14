@@ -302,6 +302,8 @@ private class RBTree[ T, A ]
 	#element according to its iteration semantic. The provided iterator is returned.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
+	#Removing might invalidate any iterator on either the previous, or the next
+	#element in ascending order.
 	private fun rb_remove_at( iter: RBTreeIterator[ T ] ): RBTreeIterator[ T ] do
 		if not iter.is_ok then return iter
 		var n = iter.node
@@ -860,6 +862,8 @@ class TreeSet[ T ]
 	#element according to its iteration semantic. The provided iterator is returned.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
+	#Removing might invalidate any iterator on either the previous, or the next
+	#element in ascending order.
 	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
 		return rb_remove_at( iter )
 	end	
@@ -954,6 +958,8 @@ class TreeMultiset[ T ]
 	#element according to its iteration semantic. The provided iterator is returned.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
+	#Removing might invalidate any iterator on either the previous, or the next
+	#element in ascending order.
 	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
 		return rb_remove_at( iter )
 	end	
@@ -1080,6 +1086,8 @@ class TreeMap[ K, V ]
 	#element according to its iteration semantic. The provided iterator is returned.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
+	#Removing might invalidate any iterator on either the previous, or the next
+	#element in ascending order.
 	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
 		return rb_remove_at( iter )
 	end	
@@ -1179,6 +1187,8 @@ class TreeMultimap[ K, V ]
 	#element according to its iteration semantic. The provided iterator is returned.
 	#NOTE: Results of removing on an already invalidated iterator are undefined.
 	#Removing on an invalid iterator does nothing.
+	#Removing might invalidate any iterator on either the previous, or the next
+	#element in ascending order.
 	fun remove_at( iter: RBTreeIterator[ T ]): RBTreeIterator[ T ] do
 		return rb_remove_at( iter )
 	end	

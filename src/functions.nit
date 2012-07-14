@@ -1,5 +1,4 @@
 
-
 #Unary function object interface.
 interface UnaryFunctor[ T, R ]
 	fun call( e: T ): R is abstract
